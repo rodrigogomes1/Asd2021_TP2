@@ -6,10 +6,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import Paxos.messages.PrepareMessage;
 import protocols.agreement.IncorrectAgreement;
 import protocols.agreement.messages.BroadcastMessage;
 import protocols.agreement.notifications.DecidedNotification;
@@ -17,6 +19,8 @@ import protocols.agreement.notifications.JoinedNotification;
 import protocols.agreement.requests.AddReplicaRequest;
 import protocols.agreement.requests.ProposeRequest;
 import protocols.agreement.requests.RemoveReplicaRequest;
+import protocols.app.messages.RequestMessage;
+import protocols.app.messages.ResponseMessage;
 import protocols.statemachine.notifications.ChannelReadyNotification;
 import pt.unl.fct.di.novasys.babel.core.GenericProtocol;
 import pt.unl.fct.di.novasys.babel.exceptions.HandlerRegistrationException;
@@ -36,7 +40,7 @@ public class Paxos extends GenericProtocol {
 	    private int joinedInstance;
 	    private List<Host> membership;
 	    
-	    private Map<String, PaxosInstance> paxosInstances;
+	    private Map<Integer, PaxosInstance> paxosInstances;
 	   
 	   
 	    public Paxos(Properties props) throws IOException, HandlerRegistrationException {
@@ -46,6 +50,7 @@ public class Paxos extends GenericProtocol {
 	         paxosInstances= new HashMap<>();
 	         
 	         /*--------------------- Register Timer Handlers ----------------------------- */
+	       
 
 	         /*--------------------- Register Request Handlers ----------------------------- */
 	         registerRequestHandler(ProposeRequest.REQUEST_ID, this::uponProposeRequest);
@@ -72,9 +77,11 @@ public class Paxos extends GenericProtocol {
 	        registerSharedChannel(cId);
 	        /*---------------------- Register Message Serializers ---------------------- */
 	        registerMessageSerializer(cId, BroadcastMessage.MSG_ID, BroadcastMessage.serializer);
+	        registerMessageSerializer(cId, RequestMessage.MSG_ID, RequestMessage.serializer);
 	        /*---------------------- Register Message Handlers -------------------------- */
 	        try {
 	              registerMessageHandler(cId, BroadcastMessage.MSG_ID, this::uponBroadcastMessage, this::uponMsgFail);
+	              registerMessageHandler(cId, PrepareMessage.MSG_ID, this::uponPrepareMessage);
 	        } catch (HandlerRegistrationException e) {
 	            throw new AssertionError("Error registering message handler.", e);
 	        }
@@ -102,10 +109,33 @@ public class Paxos extends GenericProtocol {
 
 	    private void uponProposeRequest(ProposeRequest request, short sourceProto) {
 	        logger.debug("Received " + request);
+	        PaxosInstance p = new PaxosInstance(myself, membership);
+	        paxosInstances.put(request.getInstance(), p);
+	        p.setProposer_op(request.getOperation());
+	        PrepareMessage prep;
+	        for(Host member: membership) {
+	        	
+	        	prep= new PrepareMessage(member,p.getProposer_seq(),request.getInstance());
+	        	sendMessage(prep, member);
+	        }
+	        p.setPrepate_ok_set(new TreeMap<Integer, byte[]>());
+	        //TODO timeout
+	        
+	        
+	        //n deve ser preciso a parte de baixo
 	        BroadcastMessage msg = new BroadcastMessage(request.getInstance(), request.getOpId(), request.getOperation());
 	        logger.debug("Sending to: " + membership);
 	        membership.forEach(h -> sendMessage(msg, h));
+	        //
 	    }
+	    
+	    private void uponPrepareMessage(PrepareMessage prepare,Host from, short sourceProto, int channelId) {
+	    	
+	    	
+	    }
+	    
+	    
+	    
 	    private void uponAddReplica(AddReplicaRequest request, short sourceProto) {
 	        logger.debug("Received " + request);
 	        //The AddReplicaRequest contains an "instance" field, which we ignore in this incorrect protocol.
