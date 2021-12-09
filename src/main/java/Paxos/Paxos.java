@@ -165,6 +165,7 @@ public class Paxos extends GenericProtocol {
 	    	        	sendMessage(acceptMsg, member);
 	    	        }
 	    			p.setPrepate_ok_set(new TreeMap<Integer, byte[]>() );
+					//TODO timeout stuff
 	    		}
 	    	} 	
 	    }
