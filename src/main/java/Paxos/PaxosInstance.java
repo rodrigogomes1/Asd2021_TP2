@@ -1,6 +1,7 @@
 package Paxos;
 
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import pt.unl.fct.di.novasys.network.data.Host;
@@ -11,7 +12,7 @@ public class PaxosInstance {
     private int proposer_seq;
     private int highest_prepare;
     private int highest_accept;
-    private byte[] highest_value;
+    private byte[] highest_Op;
     private TreeMap<Integer, byte[]> prepate_ok_set;
     private TreeMap<Integer, byte[]> accept_ok_set;
     private List<Host> membeship;
@@ -24,7 +25,7 @@ public class PaxosInstance {
     	proposer_op=null;
     	highest_prepare=0;
     	highest_accept=0;
-    	highest_value=null;
+    	highest_Op=null;
     	prepate_ok_set=new TreeMap<Integer, byte[]>();
     	accept_ok_set = new TreeMap<Integer, byte[]>();
     	decided=null;
@@ -71,13 +72,13 @@ public class PaxosInstance {
 	}
 
 
-	public byte[] getHighest_value() {
-		return highest_value;
+	public byte[] getHighest_Op() {
+		return highest_Op;
 	}
 
 
-	public void setHighest_value(byte[] highest_value) {
-		this.highest_value = highest_value;
+	public void setHighest_Op(byte[] highest_Op) {
+		this.highest_Op = highest_Op;
 	}
 
 
@@ -89,6 +90,19 @@ public class PaxosInstance {
 	public void setPrepate_ok_set(TreeMap<Integer, byte[]> prepate_ok_set) {
 		this.prepate_ok_set = prepate_ok_set;
 	}
+	
+	public void add_To_Prepate_ok_set(int seqN, byte[] operation ){
+		prepate_ok_set.put(seqN, operation);
+	}
+	
+	public int getSize_Prepate_ok_set() {
+		return prepate_ok_set.size();
+	}
+	
+	public Entry<Integer, byte[]> getHighest_Of_Prepate_ok_set() {
+		return prepate_ok_set.lastEntry();
+	}
+
 
 
 	public TreeMap<Integer, byte[]> getAccept_ok_set() {

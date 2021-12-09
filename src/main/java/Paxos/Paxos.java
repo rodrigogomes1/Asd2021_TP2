@@ -5,13 +5,16 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.TreeMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import Paxos.messages.AcceptMessage;
 import Paxos.messages.PrepareMessage;
+import Paxos.messages.PrepareOkMessage;
 import protocols.agreement.IncorrectAgreement;
 import protocols.agreement.messages.BroadcastMessage;
 import protocols.agreement.notifications.DecidedNotification;
@@ -77,11 +80,15 @@ public class Paxos extends GenericProtocol {
 	        registerSharedChannel(cId);
 	        /*---------------------- Register Message Serializers ---------------------- */
 	        registerMessageSerializer(cId, BroadcastMessage.MSG_ID, BroadcastMessage.serializer);
-	        registerMessageSerializer(cId, RequestMessage.MSG_ID, RequestMessage.serializer);
+	        registerMessageSerializer(cId, PrepareMessage.MSG_ID, PrepareMessage.serializer);
+	        registerMessageSerializer(cId, PrepareOkMessage.MSG_ID, PrepareOkMessage.serializer);
+	        registerMessageSerializer(cId, AcceptMessage.MSG_ID, AcceptMessage.serializer);
 	        /*---------------------- Register Message Handlers -------------------------- */
 	        try {
 	              registerMessageHandler(cId, BroadcastMessage.MSG_ID, this::uponBroadcastMessage, this::uponMsgFail);
 	              registerMessageHandler(cId, PrepareMessage.MSG_ID, this::uponPrepareMessage);
+	              registerMessageHandler(cId, PrepareOkMessage.MSG_ID, this::uponPrepareOkMessage);
+	              registerMessageHandler(cId, AcceptMessage.MSG_ID, this::uponAcceptMessage);
 	        } catch (HandlerRegistrationException e) {
 	            throw new AssertionError("Error registering message handler.", e);
 	        }
@@ -112,11 +119,11 @@ public class Paxos extends GenericProtocol {
 	        PaxosInstance p = new PaxosInstance(myself, membership);
 	        paxosInstances.put(request.getInstance(), p);
 	        p.setProposer_op(request.getOperation());
-	        PrepareMessage prep;
+	        PrepareMessage prepMsg;
 	        for(Host member: membership) {
 	        	
-	        	prep= new PrepareMessage(member,p.getProposer_seq(),request.getInstance());
-	        	sendMessage(prep, member);
+	        	prepMsg= new PrepareMessage(member,p.getProposer_seq(),request.getInstance());
+	        	sendMessage(prepMsg, member);
 	        }
 	        p.setPrepate_ok_set(new TreeMap<Integer, byte[]>());
 	        //TODO timeout
@@ -130,9 +137,43 @@ public class Paxos extends GenericProtocol {
 	    }
 	    
 	    private void uponPrepareMessage(PrepareMessage prepare,Host from, short sourceProto, int channelId) {
-	    	
+	    	PaxosInstance p= paxosInstances.get(prepare.getInstance());
+	    	int sn=prepare.getProposer_Seq();
+	    	if(sn > p.getHighest_prepare()) {
+	    		p.setHighest_prepare(sn);
+	    		PrepareOkMessage prepOkMsg=new PrepareOkMessage(from,sn,p.getHighest_accept(),p.getHighest_Op(),prepare.getInstance()); ;
+	    		sendMessage(prepOkMsg, from);
+	    	}
 	    	
 	    }
+	    
+	    private void uponPrepareOkMessage(PrepareOkMessage prepareOk,Host from, short sourceProto, int channelId) {
+	    	int sn= prepareOk.getProposer_Seq();
+	    	int na= prepareOk.gethighAccept();
+	    	byte[] va= prepareOk.getHighOp();
+	    	PaxosInstance p= paxosInstances.get(prepareOk.getInstance());
+	    	if(p.getProposer_seq()==sn) {
+	    		p.add_To_Prepate_ok_set(na, va);
+	    		if(p.getSize_Prepate_ok_set() >= (membership.size()/2)+1) {
+	    			Entry<Integer, byte[]> highestEntry= p.getHighest_Of_Prepate_ok_set();
+	    			if(highestEntry!=null && highestEntry.getValue()!=null) {
+	    				p.setProposer_op(highestEntry.getValue());
+	    			}
+	    			AcceptMessage acceptMsg;
+	    			for(Host member: membership) {
+	    				acceptMsg= new AcceptMessage(member,p.getProposer_seq(),p.getProposer_op(),prepareOk.getInstance());
+	    	        	sendMessage(acceptMsg, member);
+	    	        }
+	    			p.setPrepate_ok_set(new TreeMap<Integer, byte[]>() );
+	    		}
+	    	} 	
+	    }
+	    
+	    private void uponAcceptMessage(AcceptMessage accept,Host from, short sourceProto, int channelId) {
+	    	
+	    }
+	    
+	    
 	    
 	    
 	    
