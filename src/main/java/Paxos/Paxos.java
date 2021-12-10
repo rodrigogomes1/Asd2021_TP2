@@ -13,6 +13,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import Paxos.messages.AcceptMessage;
+import Paxos.messages.AcceptOkMessage;
 import Paxos.messages.PrepareMessage;
 import Paxos.messages.PrepareOkMessage;
 import protocols.agreement.IncorrectAgreement;
@@ -22,8 +23,6 @@ import protocols.agreement.notifications.JoinedNotification;
 import protocols.agreement.requests.AddReplicaRequest;
 import protocols.agreement.requests.ProposeRequest;
 import protocols.agreement.requests.RemoveReplicaRequest;
-import protocols.app.messages.RequestMessage;
-import protocols.app.messages.ResponseMessage;
 import protocols.statemachine.notifications.ChannelReadyNotification;
 import pt.unl.fct.di.novasys.babel.core.GenericProtocol;
 import pt.unl.fct.di.novasys.babel.exceptions.HandlerRegistrationException;
@@ -83,12 +82,14 @@ public class Paxos extends GenericProtocol {
 	        registerMessageSerializer(cId, PrepareMessage.MSG_ID, PrepareMessage.serializer);
 	        registerMessageSerializer(cId, PrepareOkMessage.MSG_ID, PrepareOkMessage.serializer);
 	        registerMessageSerializer(cId, AcceptMessage.MSG_ID, AcceptMessage.serializer);
+	        registerMessageSerializer(cId, AcceptOkMessage.MSG_ID, AcceptOkMessage.serializer);
 	        /*---------------------- Register Message Handlers -------------------------- */
 	        try {
 	              registerMessageHandler(cId, BroadcastMessage.MSG_ID, this::uponBroadcastMessage, this::uponMsgFail);
 	              registerMessageHandler(cId, PrepareMessage.MSG_ID, this::uponPrepareMessage);
 	              registerMessageHandler(cId, PrepareOkMessage.MSG_ID, this::uponPrepareOkMessage);
 	              registerMessageHandler(cId, AcceptMessage.MSG_ID, this::uponAcceptMessage);
+	              registerMessageHandler(cId, AcceptOkMessage.MSG_ID, this::uponAcceptOkMessage);
 	        } catch (HandlerRegistrationException e) {
 	            throw new AssertionError("Error registering message handler.", e);
 	        }
@@ -171,6 +172,33 @@ public class Paxos extends GenericProtocol {
 	    }
 	    
 	    private void uponAcceptMessage(AcceptMessage accept,Host from, short sourceProto, int channelId) {
+	    	int sn= accept.getSeq();
+	    	byte[] op = accept.getOp();
+	    	PaxosInstance p= paxosInstances.get(accept.getInstance());
+	    	
+	    	if(sn > p.getHighest_prepare()) {
+	    		p.setHighest_prepare(sn);
+	    		p.setHighest_accept(sn);
+	    		p.setHighest_Op(op);
+	    		AcceptOkMessage acceptOkMsg;
+    			for(Host member: membership) {
+    				acceptOkMsg=new AcceptOkMessage(member,sn,p.getHighest_Op(),accept.getInstance()); ;
+    				sendMessage(acceptOkMsg, member);
+    			}
+	    		
+	    	}
+	    }
+	    
+	    
+	    
+	    
+	    
+	    private void uponAcceptOkMessage(AcceptOkMessage acceptOk,Host from, short sourceProto, int channelId) {
+	    	int sn= acceptOk.getSeq();
+	    	int na= acceptOk.gethighAccept();
+	    	byte[] va= acceptOk.getHighOp();
+	    	PaxosInstance p= paxosInstances.get(acceptOk.getInstance());
+	    	
 	    	
 	    }
 	    

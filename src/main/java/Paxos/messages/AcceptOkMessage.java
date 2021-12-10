@@ -9,36 +9,36 @@ import pt.unl.fct.di.novasys.network.data.Host;
 import java.util.UUID;
 
 
-public class AcceptMessage extends ProtoMessage {
+public class AcceptOkMessage extends ProtoMessage {
 
-    public final static short MSG_ID = 104;
+    public final static short MSG_ID = 105;
 
  
     private final Host dest;
     private final int seq;
+    private final byte[] highOp;
     private final int instance;
-    private final byte[] op;
 
-    public AcceptMessage(Host dest, int seq, byte[] op, int instance) {
+    public AcceptOkMessage(Host dest, int seq, byte[] highOp, int instance) {
     	super(MSG_ID);
     	this.dest=dest;
     	this.seq =seq;
-    	this.op=op;
-    	this.instance = instance;
+		this.highOp = highOp;
+		this.instance = instance;
 	}
 
 	public int getSeq() {
         return seq;
     }
 	
-	public byte[] getOp() {
-        return op;
+	public byte[] getHighOp() {
+        return highOp;
     }
 
 	
-	 public int getInstance() {
+ 	public int getInstance() {
 	        return instance;
-	    }
+    }
 
 
     public Host getDest() {
@@ -55,9 +55,9 @@ public class AcceptMessage extends ProtoMessage {
                 '}';
     }
 
-    public static ISerializer<AcceptMessage> serializer = new ISerializer<AcceptMessage>() {
+    public static ISerializer<AcceptOkMessage> serializer = new ISerializer<AcceptOkMessage>() {
         @Override
-        public void serialize(AcceptMessage msg, ByteBuf out) {
+        public void serialize(AcceptOkMessage msg, ByteBuf out) {
             out.writeInt(msg.instance);
             out.writeLong(msg.opId.getMostSignificantBits());
             out.writeLong(msg.opId.getLeastSignificantBits());
@@ -66,14 +66,14 @@ public class AcceptMessage extends ProtoMessage {
         }
 
         @Override
-        public AcceptMessage deserialize(ByteBuf in) {
+        public AcceptOkMessage deserialize(ByteBuf in) {
             int instance = in.readInt();
             long highBytes = in.readLong();
             long lowBytes = in.readLong();
             UUID opId = new UUID(highBytes, lowBytes);
             byte[] op = new byte[in.readInt()];
             in.readBytes(op);
-            return new AcceptMessage(instance, opId, op);
+            return new AcceptOkMessage(instance, opId, op);
         }
     };
    
