@@ -1,6 +1,7 @@
 package Paxos;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.TreeMap;
+import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -117,16 +119,18 @@ public class Paxos extends GenericProtocol {
 
 	    private void uponProposeRequest(ProposeRequest request, short sourceProto) {
 	        logger.debug("Received " + request);
+	        byte[] op = request.getOperation();
+	        UUID opId= request.getOpId();
 	        PaxosInstance p = new PaxosInstance(myself, membership);
 	        paxosInstances.put(request.getInstance(), p);
-	        p.setProposer_op(request.getOperation());
+	        p.setProposer_op(op,opId);
+	        
 	        PrepareMessage prepMsg;
 	        for(Host member: membership) {
-	        	
 	        	prepMsg= new PrepareMessage(member,p.getProposer_seq(),request.getInstance());
 	        	sendMessage(prepMsg, member);
 	        }
-	        p.setPrepate_ok_set(new TreeMap<Integer, byte[]>());
+	        p.setPrepate_ok_set(new TreeMap<Integer,PaxosOperation>());
 	        //TODO timeout
 	        
 	        
@@ -142,7 +146,7 @@ public class Paxos extends GenericProtocol {
 	    	int sn=prepare.getProposer_Seq();
 	    	if(sn > p.getHighest_prepare()) {
 	    		p.setHighest_prepare(sn);
-	    		PrepareOkMessage prepOkMsg=new PrepareOkMessage(from,sn,p.getHighest_accept(),p.getHighest_Op(),prepare.getInstance()); ;
+	    		PrepareOkMessage prepOkMsg=new PrepareOkMessage(from,sn,p.getHighest_accept(),p.getHighest_Op(),prepare.getInstance()); 
 	    		sendMessage(prepOkMsg, from);
 	    	}
 	    	
@@ -151,21 +155,22 @@ public class Paxos extends GenericProtocol {
 	    private void uponPrepareOkMessage(PrepareOkMessage prepareOk,Host from, short sourceProto, int channelId) {
 	    	int sn= prepareOk.getProposer_Seq();
 	    	int na= prepareOk.gethighAccept();
-	    	byte[] va= prepareOk.getHighOp();
+	    	PaxosOperation va= prepareOk.getHighOp();
 	    	PaxosInstance p= paxosInstances.get(prepareOk.getInstance());
 	    	if(p.getProposer_seq()==sn) {
 	    		p.add_To_Prepate_ok_set(na, va);
 	    		if(p.getSize_Prepate_ok_set() >= (membership.size()/2)+1) {
-	    			Entry<Integer, byte[]> highestEntry= p.getHighest_Of_Prepate_ok_set();
+	    			Entry<Integer, PaxosOperation> highestEntry= p.getHighest_Of_Prepate_ok_set();
 	    			if(highestEntry!=null && highestEntry.getValue()!=null) {
-	    				p.setProposer_op(highestEntry.getValue());
+	    				PaxosOperation op= highestEntry.getValue();
+	    				p.setProposer_op(op.getOp(),op.getOp_Id());
 	    			}
 	    			AcceptMessage acceptMsg;
 	    			for(Host member: membership) {
 	    				acceptMsg= new AcceptMessage(member,p.getProposer_seq(),p.getProposer_op(),prepareOk.getInstance());
 	    	        	sendMessage(acceptMsg, member);
 	    	        }
-	    			p.setPrepate_ok_set(new TreeMap<Integer, byte[]>() );
+	    			p.setPrepate_ok_set(new TreeMap<Integer, PaxosOperation>() );
 					//TODO timeout stuff
 	    		}
 	    	} 	
@@ -173,7 +178,7 @@ public class Paxos extends GenericProtocol {
 	    
 	    private void uponAcceptMessage(AcceptMessage accept,Host from, short sourceProto, int channelId) {
 	    	int sn= accept.getSeq();
-	    	byte[] op = accept.getOp();
+	    	PaxosOperation op = accept.getOp();
 	    	PaxosInstance p= paxosInstances.get(accept.getInstance());
 	    	
 	    	if(sn > p.getHighest_prepare()) {
@@ -185,19 +190,34 @@ public class Paxos extends GenericProtocol {
     				acceptOkMsg=new AcceptOkMessage(member,sn,p.getHighest_Op(),accept.getInstance()); ;
     				sendMessage(acceptOkMsg, member);
     			}
-	    		
 	    	}
 	    }
 	    
 	    
 	    
-	    
-	    
 	    private void uponAcceptOkMessage(AcceptOkMessage acceptOk,Host from, short sourceProto, int channelId) {
 	    	int sn= acceptOk.getSeq();
-	    	int na= acceptOk.gethighAccept();
-	    	byte[] va= acceptOk.getHighOp();
+	    	PaxosOperation op= acceptOk.getHighOp();
 	    	PaxosInstance p= paxosInstances.get(acceptOk.getInstance());
+	    	
+	    	
+	    	for(Entry<Integer, PaxosOperation> entry: p.getAccept_ok_set().entrySet()) {
+	    		if(entry.getKey()==sn && entry.getValue().getOp()==op.getOp()) {
+	    			p.add_To_Accept_ok_set(sn, op);
+	    		}else if(entry.getKey()<sn) {
+	    			TreeMap<Integer, PaxosOperation> newSet = new TreeMap<Integer, PaxosOperation>();
+	    			newSet.put(sn, op);
+	    			p.setPrepate_ok_set(newSet);
+	    		}
+	    	}
+	    	
+	    	if( p.getDecided()==null && p.getSize_Accept_ok_set() >= (membership.size()/2)+1 ) {
+	    		p.setDecided(op);
+	    		triggerNotification(new DecidedNotification(acceptOk.getInstance(), op.getOp_Id(), op.getOp()));
+	    		if(sn==p.getProposer_seq()) {
+	    			//TODO CancelTimeout
+	    		}
+	    	}
 	    	
 	    	
 	    }

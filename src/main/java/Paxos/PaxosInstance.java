@@ -3,42 +3,45 @@ package Paxos;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+import java.util.UUID;
 
 import pt.unl.fct.di.novasys.network.data.Host;
 
 public class PaxosInstance {
 	
-	private byte[] proposer_op;
+	private PaxosOperation proposer_op;
     private int proposer_seq;
     private int highest_prepare;
     private int highest_accept;
-    private byte[] highest_Op;
-    private TreeMap<Integer, byte[]> prepate_ok_set;
-    private TreeMap<Integer, byte[]> accept_ok_set;
-    private List<Host> membeship;
-    private  byte[] decided;
+    private PaxosOperation highest_Op;
+    private TreeMap<Integer, PaxosOperation> prepate_ok_set;
+    private TreeMap<Integer,PaxosOperation> accept_ok_set;
+    private List<Host> membership;
+    private PaxosOperation decided;
     
     
     public PaxosInstance(Host localProcessId,List<Host> membership) {
     	proposer_seq=localProcessId.hashCode();//pode dar mal
-    	this.membeship=membership;
+    	this.membership=membership;
     	proposer_op=null;
     	highest_prepare=0;
     	highest_accept=0;
     	highest_Op=null;
-    	prepate_ok_set=new TreeMap<Integer, byte[]>();
-    	accept_ok_set = new TreeMap<Integer, byte[]>();
+    	
+    	prepate_ok_set=new TreeMap<Integer, PaxosOperation>();
+    	accept_ok_set = new TreeMap<Integer, PaxosOperation>();
     	decided=null;
     }
 
 
-	public byte[] getProposer_op() {
+	public PaxosOperation getProposer_op() {
 		return proposer_op;
 	}
 
 
-	public void setProposer_op(byte[] proposer_op) {
-		this.proposer_op = proposer_op;
+	public void setProposer_op(byte[] proposer_op,UUID opId) {
+		PaxosOperation newOp= new PaxosOperation(proposer_op, opId);
+		this.proposer_op = newOp;
 	}
 
 
@@ -72,65 +75,73 @@ public class PaxosInstance {
 	}
 
 
-	public byte[] getHighest_Op() {
+	public PaxosOperation getHighest_Op() {
 		return highest_Op;
 	}
 
 
-	public void setHighest_Op(byte[] highest_Op) {
-		this.highest_Op = highest_Op;
+	public void setHighest_Op(PaxosOperation op) {
+		this.highest_Op = op;
 	}
 
 
-	public TreeMap<Integer, byte[]> getPrepate_ok_set() {
+	public TreeMap<Integer, PaxosOperation> getPrepate_ok_set() {
 		return prepate_ok_set;
 	}
 
 
-	public void setPrepate_ok_set(TreeMap<Integer, byte[]> prepate_ok_set) {
+	public void setPrepate_ok_set(TreeMap<Integer,PaxosOperation> prepate_ok_set) {
 		this.prepate_ok_set = prepate_ok_set;
 	}
 	
-	public void add_To_Prepate_ok_set(int seqN, byte[] operation ){
+	public void add_To_Prepate_ok_set(int seqN, PaxosOperation operation ){
 		prepate_ok_set.put(seqN, operation);
 	}
 	
 	public int getSize_Prepate_ok_set() {
-		return prepate_ok_set.size();
+		return prepate_ok_set.keySet().size();
 	}
 	
-	public Entry<Integer, byte[]> getHighest_Of_Prepate_ok_set() {
+	public Entry<Integer, PaxosOperation> getHighest_Of_Prepate_ok_set() {
 		return prepate_ok_set.lastEntry();
 	}
 
 
 
-	public TreeMap<Integer, byte[]> getAccept_ok_set() {
+	public TreeMap<Integer, PaxosOperation> getAccept_ok_set() {
 		return accept_ok_set;
+	}
+	
+	public int getSize_Accept_ok_set() {
+		return accept_ok_set.keySet().size();
+	}
+	
+	public void add_To_Accept_ok_set(int seqN, PaxosOperation operation ){
+		accept_ok_set.put(seqN, operation);
 	}
 
 
-	public void setAccept_ok_set(TreeMap<Integer, byte[]> accept_ok_set) {
+	public void setAccept_ok_set(TreeMap<Integer, PaxosOperation> accept_ok_set) {
 		this.accept_ok_set = accept_ok_set;
 	}
 
 
 	public List<Host> getMembeship() {
-		return membeship;
+		return membership;
 	}
 
 
 	public void setMembeship(List<Host> membeship) {
-		this.membeship = membeship;
+		this.membership = membeship;
 	}
 
 
-	public byte[] getDecided() {
+	public PaxosOperation getDecided() {
 		return decided;
 	}
 
 
-	public void setDecided(byte[] decided) {
-		this.decided = decided;
+	public void setDecided(PaxosOperation op) {
+		this.decided = op;
 	}
 }

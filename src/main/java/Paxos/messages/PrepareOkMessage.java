@@ -2,6 +2,8 @@ package Paxos.messages;
 
 import io.netty.buffer.ByteBuf;
 import org.apache.commons.codec.binary.Hex;
+
+import Paxos.PaxosOperation;
 import pt.unl.fct.di.novasys.babel.generic.ProtoMessage;
 import pt.unl.fct.di.novasys.network.ISerializer;
 import pt.unl.fct.di.novasys.network.data.Host;
@@ -17,10 +19,10 @@ public class PrepareOkMessage extends ProtoMessage {
     private final Host dest;
     private final int proposer_seq;
     private final int highAccept;
-    private final byte[] highOp;
+    private final PaxosOperation highOp;
     private final int instance;
 
-    public PrepareOkMessage(Host dest, int proposer_seq, int highAccept, byte[] highOp, int instance) {
+    public PrepareOkMessage(Host dest, int proposer_seq, int highAccept, PaxosOperation highOp, int instance) {
     	super(MSG_ID);
     	this.dest=dest;
     	this.proposer_seq =proposer_seq;
@@ -37,7 +39,7 @@ public class PrepareOkMessage extends ProtoMessage {
         return highAccept;
     }
 	
-	public byte[] getHighOp() {
+	public PaxosOperation getHighOp() {
         return highOp;
     }
 
