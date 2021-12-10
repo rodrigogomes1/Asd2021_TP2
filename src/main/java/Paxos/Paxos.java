@@ -1,7 +1,6 @@
 package Paxos;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,6 +17,7 @@ import Paxos.messages.AcceptMessage;
 import Paxos.messages.AcceptOkMessage;
 import Paxos.messages.PrepareMessage;
 import Paxos.messages.PrepareOkMessage;
+import Paxos.timers.PaxosTimer;
 import protocols.agreement.IncorrectAgreement;
 import protocols.agreement.messages.BroadcastMessage;
 import protocols.agreement.notifications.DecidedNotification;
@@ -39,12 +39,16 @@ public class Paxos extends GenericProtocol {
 	    //Protocol information, to register in babel
 	    public final static short PROTOCOL_ID = 100;
 	    public final static String PROTOCOL_NAME = "EmptyAgreement";
+	    
+	    private final int paxosTimeutTime; //param: timeout for Paxos
 
 	    private Host myself;
 	    private int joinedInstance;
 	    private List<Host> membership;
 	    
 	    private Map<Integer, PaxosInstance> paxosInstances;
+	    private long paxosTimer;
+	    
 	   
 	   
 	    public Paxos(Properties props) throws IOException, HandlerRegistrationException {
@@ -53,8 +57,10 @@ public class Paxos extends GenericProtocol {
 	         membership = null;
 	         paxosInstances= new HashMap<>();
 	         
+	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "5000")); //5 seconds
+	         
 	         /*--------------------- Register Timer Handlers ----------------------------- */
-	       
+	         registerTimerHandler(PaxosTimer.TIMER_ID, this::uponPaxosTimer);
 
 	         /*--------------------- Register Request Handlers ----------------------------- */
 	         registerRequestHandler(ProposeRequest.REQUEST_ID, this::uponProposeRequest);
@@ -79,6 +85,7 @@ public class Paxos extends GenericProtocol {
 	        logger.info("Channel {} created, I am {}", cId, myself);
 	        // Allows this protocol to receive events from this channel.
 	        registerSharedChannel(cId);
+	        
 	        /*---------------------- Register Message Serializers ---------------------- */
 	        registerMessageSerializer(cId, BroadcastMessage.MSG_ID, BroadcastMessage.serializer);
 	        registerMessageSerializer(cId, PrepareMessage.MSG_ID, PrepareMessage.serializer);
@@ -131,14 +138,14 @@ public class Paxos extends GenericProtocol {
 	        	sendMessage(prepMsg, member);
 	        }
 	        p.setPrepate_ok_set(new TreeMap<Integer,PaxosOperation>());
-	        //TODO timeout
+	        
+	        paxosTimer= setupTimer(new PaxosTimer(request.getInstance()), paxosTimeutTime);
 	        
 	        
-	        //n deve ser preciso a parte de baixo
+	        //n deve ser preciso a parte de baixo em vez do for de cima
 	        BroadcastMessage msg = new BroadcastMessage(request.getInstance(), request.getOpId(), request.getOperation());
 	        logger.debug("Sending to: " + membership);
 	        membership.forEach(h -> sendMessage(msg, h));
-	        //
 	    }
 	    
 	    private void uponPrepareMessage(PrepareMessage prepare,Host from, short sourceProto, int channelId) {
@@ -171,7 +178,8 @@ public class Paxos extends GenericProtocol {
 	    	        	sendMessage(acceptMsg, member);
 	    	        }
 	    			p.setPrepate_ok_set(new TreeMap<Integer, PaxosOperation>() );
-					//TODO timeout stuff
+	    			this.cancelTimer(paxosTimer);
+	    			paxosTimer= setupTimer(new PaxosTimer(prepareOk.getInstance()), paxosTimeutTime);
 	    		}
 	    	} 	
 	    }
@@ -215,11 +223,24 @@ public class Paxos extends GenericProtocol {
 	    		p.setDecided(op);
 	    		triggerNotification(new DecidedNotification(acceptOk.getInstance(), op.getOp_Id(), op.getOp()));
 	    		if(sn==p.getProposer_seq()) {
-	    			//TODO CancelTimeout
+	    			this.cancelTimer(paxosTimer);
 	    		}
 	    	}
-	    	
-	    	
+	    }
+	    
+	    private void uponPaxosTimer(PaxosTimer pTimer, long timerId) {
+	    	int instN=pTimer.getInstance();
+	        logger.info("Paxos Timeout with instance number "+instN+" .");
+	        PaxosInstance p = paxosInstances.get(instN);
+	        if(p.getDecided()==null) {
+	        	PrepareMessage prepMsg;
+	 	        for(Host member: membership) {
+	 	        	prepMsg= new PrepareMessage(member,p.getProposer_seq(),instN);
+	 	        	sendMessage(prepMsg, member);
+	 	        }
+	 	        p.setPrepate_ok_set(new TreeMap<Integer,PaxosOperation>());
+	 	        paxosTimer= setupTimer(new PaxosTimer(instN), paxosTimeutTime);
+	        }
 	    }
 	    
 	    
