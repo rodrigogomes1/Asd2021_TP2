@@ -1,12 +1,11 @@
 package Paxos.messages;
 
 import io.netty.buffer.ByteBuf;
-import org.apache.commons.codec.binary.Hex;
 import pt.unl.fct.di.novasys.babel.generic.ProtoMessage;
 import pt.unl.fct.di.novasys.network.ISerializer;
 import pt.unl.fct.di.novasys.network.data.Host;
 
-import java.util.UUID;
+import java.io.IOException;
 
 
 public class PrepareMessage extends ProtoMessage {
@@ -22,7 +21,7 @@ public class PrepareMessage extends ProtoMessage {
     	super(MSG_ID);
     	this.dest=dest;
     	this.proposer_seq =proposer_seq;
-    	 this.instance = instance;
+    	this.instance = instance;
 	}
 
 	public int getProposer_Seq() {
@@ -40,34 +39,29 @@ public class PrepareMessage extends ProtoMessage {
     }
 
     
-    @Override
+  /*  @Override
     public String toString() {
         return "BroadcastMessage{" +
                 "opId=" + opId +
                 ", instance=" + instance +
                 ", op=" + Hex.encodeHexString(op) +
                 '}';
-    }
+    }*/
 
     public static ISerializer<PrepareMessage> serializer = new ISerializer<PrepareMessage>() {
         @Override
-        public void serialize(PrepareMessage msg, ByteBuf out) {
-            out.writeInt(msg.instance);
-            out.writeLong(msg.opId.getMostSignificantBits());
-            out.writeLong(msg.opId.getLeastSignificantBits());
-            out.writeInt(msg.op.length);
-            out.writeBytes(msg.op);
+        public void serialize(PrepareMessage msg, ByteBuf out) throws IOException {
+        	Host.serializer.serialize(msg.dest, out);
+        	out.writeInt(msg.proposer_seq);
+            out.writeInt(msg.instance);   
         }
 
         @Override
-        public PrepareMessage deserialize(ByteBuf in) {
+        public PrepareMessage deserialize(ByteBuf in) throws IOException {
+        	Host dest = Host.serializer.deserialize(in);
+            int proposer_seq = in.readInt();
             int instance = in.readInt();
-            long highBytes = in.readLong();
-            long lowBytes = in.readLong();
-            UUID opId = new UUID(highBytes, lowBytes);
-            byte[] op = new byte[in.readInt()];
-            in.readBytes(op);
-            return new PrepareMessage(instance, opId, op);
+            return new PrepareMessage(dest, proposer_seq, instance);
         }
     };
    

@@ -1,13 +1,12 @@
 package Paxos.messages;
 
 import io.netty.buffer.ByteBuf;
-import org.apache.commons.codec.binary.Hex;
-
 import Paxos.PaxosOperation;
 import pt.unl.fct.di.novasys.babel.generic.ProtoMessage;
 import pt.unl.fct.di.novasys.network.ISerializer;
 import pt.unl.fct.di.novasys.network.data.Host;
 
+import java.io.IOException;
 import java.util.UUID;
 
 
@@ -48,34 +47,39 @@ public class AcceptMessage extends ProtoMessage {
     }
 
     
-    @Override
+   /* @Override
     public String toString() {
         return "BroadcastMessage{" +
                 "opId=" + opId +
                 ", instance=" + instance +
                 ", op=" + Hex.encodeHexString(op) +
                 '}';
-    }
+    }*/
 
     public static ISerializer<AcceptMessage> serializer = new ISerializer<AcceptMessage>() {
         @Override
-        public void serialize(AcceptMessage msg, ByteBuf out) {
+        public void serialize(AcceptMessage msg, ByteBuf out) throws IOException {
+        	Host.serializer.serialize(msg.dest, out);
             out.writeInt(msg.instance);
-            out.writeLong(msg.opId.getMostSignificantBits());
-            out.writeLong(msg.opId.getLeastSignificantBits());
-            out.writeInt(msg.op.length);
-            out.writeBytes(msg.op);
+            out.writeInt(msg.seq);
+            out.writeLong(msg.op.getOp_Id().getMostSignificantBits());
+            out.writeLong(msg.op.getOp_Id().getLeastSignificantBits());
+            out.writeInt(msg.op.getOp().length);
+            out.writeBytes(msg.op.getOp());
         }
 
         @Override
-        public AcceptMessage deserialize(ByteBuf in) {
+        public AcceptMessage deserialize(ByteBuf in) throws IOException {
+        	Host dest = Host.serializer.deserialize(in);
             int instance = in.readInt();
+            int seq = in.readInt();
             long highBytes = in.readLong();
             long lowBytes = in.readLong();
             UUID opId = new UUID(highBytes, lowBytes);
             byte[] op = new byte[in.readInt()];
             in.readBytes(op);
-            return new AcceptMessage(instance, opId, op);
+            PaxosOperation po = new PaxosOperation(op, opId);
+            return new AcceptMessage(dest, seq, po, instance);
         }
     };
    
