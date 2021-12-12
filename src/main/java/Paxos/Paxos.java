@@ -1,6 +1,7 @@
 package Paxos;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -142,10 +143,11 @@ public class Paxos extends GenericProtocol {
 	        paxosTimer= setupTimer(new PaxosTimer(request.getInstance()), paxosTimeutTime);
 	        
 	        
-	        //n deve ser preciso a parte de baixo em vez do for de cima
+	        //n deve ser preciso a parte de baixo -> seria em vez do for de cima
+	        /*
 	        BroadcastMessage msg = new BroadcastMessage(request.getInstance(), request.getOpId(), request.getOperation());
 	        logger.debug("Sending to: " + membership);
-	        membership.forEach(h -> sendMessage(msg, h));
+	        membership.forEach(h -> sendMessage(msg, h));*/
 	    }
 	    
 	    private void uponPrepareMessage(PrepareMessage prepare,Host from, short sourceProto, int channelId) {
@@ -208,16 +210,16 @@ public class Paxos extends GenericProtocol {
 	    	PaxosOperation op= acceptOk.getHighOp();
 	    	PaxosInstance p= paxosInstances.get(acceptOk.getInstance());
 	    	
+	    	Entry<Integer, ArrayList<PaxosOperation>> entry = p.getAccept_ok_set().firstEntry();
+	    	logger.info("Entrou no AcceptOk com size do acceptOkSet: "+p.getSize_Accept_ok_set()+" .");
 	    	
-	    	for(Entry<Integer, PaxosOperation> entry: p.getAccept_ok_set().entrySet()) {
-	    		if(entry.getKey()==sn && entry.getValue().getOp()==op.getOp()) {
-	    			p.add_To_Accept_ok_set(sn, op);
-	    		}else if(entry.getKey()<sn) {
-	    			TreeMap<Integer, PaxosOperation> newSet = new TreeMap<Integer, PaxosOperation>();
-	    			newSet.put(sn, op);
-	    			p.setPrepate_ok_set(newSet);
-	    		}
-	    	}
+    		if(entry==null || (entry.getKey()==sn && entry.getValue().get(0).getOp()==op.getOp())) {
+    			p.add_To_Accept_ok_set(sn, op);
+    		}else if(entry.getKey()<sn) {
+    			TreeMap<Integer, ArrayList<PaxosOperation>> newSet = new TreeMap<Integer, ArrayList<PaxosOperation>>();
+    			p.setAccept_ok_set(newSet);
+    			p.add_To_Accept_ok_set(sn, op);
+       		}
 	    	
 	    	if( p.getDecided()==null && p.getSize_Accept_ok_set() >= (membership.size()/2)+1 ) {
 	    		p.setDecided(op);
@@ -257,6 +259,9 @@ public class Paxos extends GenericProtocol {
 	        logger.debug("Received " + request);
 	        //The RemoveReplicaRequest contains an "instance" field, which we ignore in this incorrect protocol.
 	        //You should probably take it into account while doing whatever you do here.
+	        if(request.getReplica()==myself) {
+	        	joinedInstance=-1;
+	        }
 	        membership.remove(request.getReplica());
 	    }
 

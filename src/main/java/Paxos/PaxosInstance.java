@@ -1,5 +1,6 @@
 package Paxos;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -15,7 +16,7 @@ public class PaxosInstance {
     private int highest_accept;
     private PaxosOperation highest_Op;
     private TreeMap<Integer, PaxosOperation> prepate_ok_set;
-    private TreeMap<Integer,PaxosOperation> accept_ok_set;
+    private TreeMap<Integer,ArrayList<PaxosOperation>> accept_ok_set;
     private List<Host> membership;
     private PaxosOperation decided;
     
@@ -29,7 +30,7 @@ public class PaxosInstance {
     	highest_Op=null;
     	
     	prepate_ok_set=new TreeMap<Integer, PaxosOperation>();
-    	accept_ok_set = new TreeMap<Integer, PaxosOperation>();
+    	accept_ok_set = new TreeMap<Integer, ArrayList<PaxosOperation>>();
     	decided=null;
     }
 
@@ -108,20 +109,28 @@ public class PaxosInstance {
 
 
 
-	public TreeMap<Integer, PaxosOperation> getAccept_ok_set() {
+	public TreeMap<Integer,  ArrayList<PaxosOperation>> getAccept_ok_set() {
 		return accept_ok_set;
 	}
 	
 	public int getSize_Accept_ok_set() {
-		return accept_ok_set.keySet().size();
+		if(accept_ok_set.firstEntry()==null) {
+			return 0;
+		}
+		return accept_ok_set.firstEntry().getValue().size();
 	}
 	
 	public void add_To_Accept_ok_set(int seqN, PaxosOperation operation ){
-		accept_ok_set.put(seqN, operation);
+		ArrayList<PaxosOperation> paxList=accept_ok_set.get(seqN);
+		if(paxList==null) {
+			paxList=new ArrayList<PaxosOperation>();
+		}
+		paxList.add(operation);
+		accept_ok_set.put(seqN, paxList);
 	}
 
 
-	public void setAccept_ok_set(TreeMap<Integer, PaxosOperation> accept_ok_set) {
+	public void setAccept_ok_set(TreeMap<Integer, ArrayList<PaxosOperation>> accept_ok_set) {
 		this.accept_ok_set = accept_ok_set;
 	}
 
