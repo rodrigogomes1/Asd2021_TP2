@@ -141,13 +141,6 @@ public class Paxos extends GenericProtocol {
 	        p.setPrepate_ok_set(new TreeMap<Integer,PaxosOperation>());
 	        
 	        paxosTimer= setupTimer(new PaxosTimer(request.getInstance()), paxosTimeutTime);
-	        
-	        
-	        //n deve ser preciso a parte de baixo -> seria em vez do for de cima
-	        /*
-	        BroadcastMessage msg = new BroadcastMessage(request.getInstance(), request.getOpId(), request.getOperation());
-	        logger.debug("Sending to: " + membership);
-	        membership.forEach(h -> sendMessage(msg, h));*/
 	    }
 	    
 	    private void uponPrepareMessage(PrepareMessage prepare,Host from, short sourceProto, int channelId) {
@@ -158,7 +151,6 @@ public class Paxos extends GenericProtocol {
 	    		PrepareOkMessage prepOkMsg=new PrepareOkMessage(from,sn,p.getHighest_accept(),p.getHighest_Op(),prepare.getInstance()); 
 	    		sendMessage(prepOkMsg, from);
 	    	}
-	    	
 	    }
 	    
 	    private void uponPrepareOkMessage(PrepareOkMessage prepareOk,Host from, short sourceProto, int channelId) {
@@ -168,6 +160,7 @@ public class Paxos extends GenericProtocol {
 	    	PaxosInstance p= paxosInstances.get(prepareOk.getInstance());
 	    	if(p.getProposer_seq()==sn) {
 	    		p.add_To_Prepate_ok_set(na, va);
+	    		logger.info("Entrou no PrepareOK com size do prepareOkSet: "+p.getSize_Prepate_ok_set()+" .");
 	    		if(p.getSize_Prepate_ok_set() >= (membership.size()/2)+1) {
 	    			Entry<Integer, PaxosOperation> highestEntry= p.getHighest_Of_Prepate_ok_set();
 	    			if(highestEntry!=null && highestEntry.getValue()!=null) {
