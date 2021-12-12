@@ -50,6 +50,8 @@ public class Paxos extends GenericProtocol {
 	    private Map<Integer, PaxosInstance> paxosInstances;
 	    private long paxosTimer;
 	    
+	    
+	    private Map<Host, Integer> replicasDown;
 	   
 	   
 	    public Paxos(Properties props) throws IOException, HandlerRegistrationException {
@@ -57,6 +59,7 @@ public class Paxos extends GenericProtocol {
 	         joinedInstance = -1; //-1 means we have not yet joined the system
 	         membership = null;
 	         paxosInstances= new HashMap<>();
+	         replicasDown= new HashMap<>();
 	         
 	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "5000")); //5 seconds
 	         
@@ -234,27 +237,39 @@ public class Paxos extends GenericProtocol {
 	 	        	sendMessage(prepMsg, member);
 	 	        }
 	 	        p.setPrepate_ok_set(new TreeMap<Integer,PaxosOperation>());
-	 	        paxosTimer= setupTimer(new PaxosTimer(instN), paxosTimeutTime);
+	 	        paxosTimer = setupTimer(new PaxosTimer(instN), paxosTimeutTime);
 	        }
 	    }
 	    
-	    
-	    
-	    
+	    private boolean canExecuteCommand(int messageSeqN,Host src) {
+	    	if(replicasDown.get(src) != null) {
+	    		if(messageSeqN < replicasDown.get(src)) {
+	    			return true;
+	    		}
+	    	}
+	    	return false;
+	    }
 	    
 	    private void uponAddReplica(AddReplicaRequest request, short sourceProto) {
 	        logger.debug("Received " + request);
 	        //The AddReplicaRequest contains an "instance" field, which we ignore in this incorrect protocol.
 	        //You should probably take it into account while doing whatever you do here.
+	        
+	        replicasDown.remove(request.getReplica());
+	        
 	        membership.add(request.getReplica());
 	    }
 	    private void uponRemoveReplica(RemoveReplicaRequest request, short sourceProto) {
 	        logger.debug("Received " + request);
+	        
 	        //The RemoveReplicaRequest contains an "instance" field, which we ignore in this incorrect protocol.
 	        //You should probably take it into account while doing whatever you do here.
 	        if(request.getReplica()==myself) {
 	        	joinedInstance=-1;
 	        }
+	        
+	        replicasDown.put(request.getReplica(), request.getInstance());
+	        
 	        membership.remove(request.getReplica());
 	    }
 
