@@ -48,10 +48,7 @@ public class Paxos extends GenericProtocol {
 	    private List<Host> membership;
 	    
 	    private Map<Integer, PaxosInstance> paxosInstances;
-	    private long paxosTimer;
-	    
-	    
-	    private Map<Host, Integer> replicasDown;
+	
 	   
 	   
 	    public Paxos(Properties props) throws IOException, HandlerRegistrationException {
@@ -59,7 +56,6 @@ public class Paxos extends GenericProtocol {
 	         joinedInstance = -1; //-1 means we have not yet joined the system
 	         membership = null;
 	         paxosInstances= new HashMap<>();
-	         replicasDown= new HashMap<>();
 	         
 	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "5000")); //5 seconds
 	         
@@ -133,21 +129,28 @@ public class Paxos extends GenericProtocol {
 	        byte[] op = request.getOperation();
 	        UUID opId= request.getOpId();
 	        PaxosInstance p = new PaxosInstance(myself, membership);
-	        paxosInstances.put(request.getInstance(), p);
+	        
 	        p.setProposer_op(op,opId);
 	        
 	        PrepareMessage prepMsg;
-	        for(Host member: membership) {
+	        for(Host member: p.getMembeship()) {
 	        	prepMsg= new PrepareMessage(member,p.getProposer_seq(),request.getInstance());
 	        	sendMessage(prepMsg, member);
 	        }
 	        p.setPrepate_ok_set(new TreeMap<Integer,PaxosOperation>());
 	        
-	        paxosTimer= setupTimer(new PaxosTimer(request.getInstance()), paxosTimeutTime);
+	        long paxosTimerId= setupTimer(new PaxosTimer(request.getInstance()), paxosTimeutTime);
+	        p.setTimer(paxosTimerId);
+	        
+	        paxosInstances.put(request.getInstance(), p);
 	    }
 	    
 	    private void uponPrepareMessage(PrepareMessage prepare,Host from, short sourceProto, int channelId) {
 	    	PaxosInstance p= paxosInstances.get(prepare.getInstance());
+	    	if(p==null) {
+	    		 p = new PaxosInstance(from, prepare.getMembership());
+	    		 paxosInstances.put(prepare.getInstance(), p);
+	    	}
 	    	int sn=prepare.getProposer_Seq();
 	    	if(sn > p.getHighest_prepare()) {
 	    		p.setHighest_prepare(sn);
@@ -164,20 +167,21 @@ public class Paxos extends GenericProtocol {
 	    	if(p.getProposer_seq()==sn) {
 	    		p.add_To_Prepate_ok_set(na, va);
 	    		logger.info("Entrou no PrepareOK com size do prepareOkSet: "+p.getSize_Prepate_ok_set()+" .");
-	    		if(p.getSize_Prepate_ok_set() >= (membership.size()/2)+1) {
+	    		if(p.getSize_Prepate_ok_set() >= (p.getMembeship().size()/2)+1) {
 	    			Entry<Integer, PaxosOperation> highestEntry= p.getHighest_Of_Prepate_ok_set();
 	    			if(highestEntry!=null && highestEntry.getValue()!=null) {
 	    				PaxosOperation op= highestEntry.getValue();
 	    				p.setProposer_op(op.getOp(),op.getOp_Id());
 	    			}
 	    			AcceptMessage acceptMsg;
-	    			for(Host member: membership) {
-	    				acceptMsg= new AcceptMessage(member,p.getProposer_seq(),p.getProposer_op(),prepareOk.getInstance());
+	    			for(Host member: p.getMembeship()) {
+	    				acceptMsg= new AcceptMessage(member,p.getProposer_seq(),p.getProposer_op(),prepareOk.getInstance(),p.getMembeship());
 	    	        	sendMessage(acceptMsg, member);
 	    	        }
 	    			p.setPrepate_ok_set(new TreeMap<Integer, PaxosOperation>() );
-	    			this.cancelTimer(paxosTimer);
-	    			paxosTimer= setupTimer(new PaxosTimer(prepareOk.getInstance()), paxosTimeutTime);
+	    			this.cancelTimer(p.getTimer());
+	    			long paxosTimerId= setupTimer(new PaxosTimer(prepareOk.getInstance()), paxosTimeutTime);
+	    			p.setTimer(paxosTimerId);
 	    		}
 	    	} 	
 	    }
@@ -186,14 +190,15 @@ public class Paxos extends GenericProtocol {
 	    	int sn= accept.getSeq();
 	    	PaxosOperation op = accept.getOp();
 	    	PaxosInstance p= paxosInstances.get(accept.getInstance());
+	    	p.setMembeship(accept.getMembership());
 	    	
 	    	if(sn > p.getHighest_prepare()) {
 	    		p.setHighest_prepare(sn);
 	    		p.setHighest_accept(sn);
 	    		p.setHighest_Op(op);
 	    		AcceptOkMessage acceptOkMsg;
-    			for(Host member: membership) {
-    				acceptOkMsg=new AcceptOkMessage(member,sn,p.getHighest_Op(),accept.getInstance()); ;
+    			for(Host member: p.getMembeship()) {
+    				acceptOkMsg=new AcceptOkMessage(member,sn,p.getHighest_Op(),accept.getInstance());
     				sendMessage(acceptOkMsg, member);
     			}
 	    	}
@@ -221,7 +226,7 @@ public class Paxos extends GenericProtocol {
 	    		p.setDecided(op);
 	    		triggerNotification(new DecidedNotification(acceptOk.getInstance(), op.getOp_Id(), op.getOp()));
 	    		if(sn==p.getProposer_seq()) {
-	    			this.cancelTimer(paxosTimer);
+	    			this.cancelTimer(p.getTimer());
 	    		}
 	    	}
 	    }
@@ -237,38 +242,26 @@ public class Paxos extends GenericProtocol {
 	 	        	sendMessage(prepMsg, member);
 	 	        }
 	 	        p.setPrepate_ok_set(new TreeMap<Integer,PaxosOperation>());
-	 	        paxosTimer = setupTimer(new PaxosTimer(instN), paxosTimeutTime);
+	 	        long paxosTimerId = setupTimer(new PaxosTimer(instN), paxosTimeutTime);
+	 	        p.setTimer(paxosTimerId);
 	        }
 	    }
-	    
-	    private boolean canExecuteCommand(int messageSeqN,Host src) {
-	    	if(replicasDown.get(src) != null) {
-	    		if(messageSeqN < replicasDown.get(src)) {
-	    			return true;
-	    		}
-	    	}
-	    	return false;
-	    }
+	   
 	    
 	    private void uponAddReplica(AddReplicaRequest request, short sourceProto) {
 	        logger.debug("Received " + request);
 	        //The AddReplicaRequest contains an "instance" field, which we ignore in this incorrect protocol.
 	        //You should probably take it into account while doing whatever you do here.
 	        
-	        replicasDown.remove(request.getReplica());
 	        
 	        membership.add(request.getReplica());
 	    }
+	    
 	    private void uponRemoveReplica(RemoveReplicaRequest request, short sourceProto) {
 	        logger.debug("Received " + request);
 	        
 	        //The RemoveReplicaRequest contains an "instance" field, which we ignore in this incorrect protocol.
 	        //You should probably take it into account while doing whatever you do here.
-	        if(request.getReplica()==myself) {
-	        	joinedInstance=-1;
-	        }
-	        
-	        replicasDown.put(request.getReplica(), request.getInstance());
 	        
 	        membership.remove(request.getReplica());
 	    }

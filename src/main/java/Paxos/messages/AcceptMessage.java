@@ -7,6 +7,8 @@ import pt.unl.fct.di.novasys.network.ISerializer;
 import pt.unl.fct.di.novasys.network.data.Host;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -19,13 +21,15 @@ public class AcceptMessage extends ProtoMessage {
     private final int seq;
     private final int instance;
     private final PaxosOperation op;
+    private final List<Host> membership;
 
-    public AcceptMessage(Host dest, int seq, PaxosOperation op, int instance) {
+    public AcceptMessage(Host dest, int seq, PaxosOperation op, int instance, List<Host> membership) {
     	super(MSG_ID);
     	this.dest=dest;
     	this.seq =seq;
     	this.op=op;
     	this.instance = instance;
+    	this.membership=membership;
 	}
 
 	public int getSeq() {
@@ -44,6 +48,10 @@ public class AcceptMessage extends ProtoMessage {
 
     public Host getDest() {
         return dest;
+    }
+    
+    public List<Host> getMembership() {
+        return membership;
     }
 
     
@@ -66,6 +74,12 @@ public class AcceptMessage extends ProtoMessage {
             out.writeLong(msg.op.getOp_Id().getLeastSignificantBits());
             out.writeInt(msg.op.getOp().length);
             out.writeBytes(msg.op.getOp());
+            int size=msg.membership.size();
+            out.writeInt(size);
+            for(Host h: msg.membership) {
+            	Host.serializer.serialize(h, out);
+            }
+            
         }
 
         @Override
@@ -78,8 +92,14 @@ public class AcceptMessage extends ProtoMessage {
             UUID opId = new UUID(highBytes, lowBytes);
             byte[] op = new byte[in.readInt()];
             in.readBytes(op);
+            int size = in.readInt();
+            List<Host> members=new ArrayList<Host>();
+            for(int i=0;i<size;i++) {
+            	Host h = Host.serializer.deserialize(in);
+            	members.add(h);
+            }
             PaxosOperation po = new PaxosOperation(op, opId);
-            return new AcceptMessage(dest, seq, po, instance);
+            return new AcceptMessage(dest, seq, po, instance,members);
         }
     };
    

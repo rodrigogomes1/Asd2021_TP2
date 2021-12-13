@@ -19,10 +19,11 @@ public class PaxosInstance {
     private TreeMap<Integer,ArrayList<PaxosOperation>> accept_ok_set;
     private List<Host> membership;
     private PaxosOperation decided;
+    private long timeOutId;
     
     
     public PaxosInstance(Host localProcessId,List<Host> membership) {
-    	proposer_seq=localProcessId.hashCode();//pode dar mal
+    	proposer_seq=localProcessId.hashCode();
     	this.membership=membership;
     	proposer_op=null;
     	highest_prepare=0;
@@ -32,6 +33,15 @@ public class PaxosInstance {
     	prepate_ok_set=new TreeMap<Integer, PaxosOperation>();
     	accept_ok_set = new TreeMap<Integer, ArrayList<PaxosOperation>>();
     	decided=null;
+    	timeOutId=-1;
+    }
+    
+    public void setTimer(long timeoutId) {
+    	this.timeOutId=timeoutId;
+    }
+
+    public long getTimer() {
+    	return timeOutId;
     }
 
 
