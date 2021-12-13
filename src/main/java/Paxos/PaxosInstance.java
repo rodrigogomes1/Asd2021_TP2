@@ -15,7 +15,7 @@ public class PaxosInstance {
     private int highest_prepare;
     private int highest_accept;
     private PaxosOperation highest_Op;
-    private TreeMap<Integer, PaxosOperation> prepate_ok_set;
+    private TreeMap<Integer, PaxosOperation> prepare_ok_set;
     private TreeMap<Integer,ArrayList<PaxosOperation>> accept_ok_set;
     private List<Host> membership;
     private PaxosOperation decided;
@@ -30,7 +30,7 @@ public class PaxosInstance {
     	highest_accept=0;
     	highest_Op=null;
     	
-    	prepate_ok_set=new TreeMap<Integer, PaxosOperation>();
+    	prepare_ok_set=new TreeMap<Integer, PaxosOperation>();
     	accept_ok_set = new TreeMap<Integer, ArrayList<PaxosOperation>>();
     	decided=null;
     	timeOutId=-1;
@@ -96,25 +96,25 @@ public class PaxosInstance {
 	}
 
 
-	public TreeMap<Integer, PaxosOperation> getPrepate_ok_set() {
-		return prepate_ok_set;
+	public TreeMap<Integer, PaxosOperation> getPrepare_ok_set() {
+		return prepare_ok_set;
 	}
 
 
-	public void setPrepate_ok_set(TreeMap<Integer,PaxosOperation> prepate_ok_set) {
-		this.prepate_ok_set = prepate_ok_set;
+	public void setPrepare_ok_set(TreeMap<Integer,PaxosOperation> prepate_ok_set) {
+		this.prepare_ok_set = prepate_ok_set;
 	}
 	
-	public void add_To_Prepate_ok_set(int seqN, PaxosOperation operation ){
-		prepate_ok_set.put(seqN, operation);
+	public void add_To_Prepare_ok_set(int seqN, PaxosOperation operation ){
+		prepare_ok_set.put(seqN, operation);
 	}
 	
-	public int getSize_Prepate_ok_set() {
-		return prepate_ok_set.keySet().size();
+	public int getSize_Prepare_ok_set() {
+		return prepare_ok_set.keySet().size();
 	}
 	
-	public Entry<Integer, PaxosOperation> getHighest_Of_Prepate_ok_set() {
-		return prepate_ok_set.lastEntry();
+	public Entry<Integer, PaxosOperation> getHighest_Of_Prepare_ok_set() {
+		return prepare_ok_set.lastEntry();
 	}
 
 
@@ -145,13 +145,13 @@ public class PaxosInstance {
 	}
 
 
-	public List<Host> getMembeship() {
+	public List<Host> getMembership() {
 		return membership;
 	}
 
 
-	public void setMembeship(List<Host> membeship) {
-		this.membership = membeship;
+	public void setMembership(List<Host> membership) {
+		this.membership = membership;
 	}
 
 
