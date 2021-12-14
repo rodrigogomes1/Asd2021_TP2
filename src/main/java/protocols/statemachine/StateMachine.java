@@ -4,6 +4,7 @@ import protocols.agreement.IncorrectAgreement;
 import protocols.agreement.notifications.JoinedNotification;
 import protocols.agreement.requests.AddReplicaRequest;
 import protocols.app.HashApp;
+import protocols.app.messages.ResponseMessage;
 import protocols.app.requests.CurrentStateReply;
 import protocols.app.requests.CurrentStateRequest;
 import protocols.app.requests.InstallStateRequest;
@@ -105,10 +106,12 @@ public class StateMachine extends GenericProtocol {
         /*-------------------- Register Message Serializers ----------------------- */
         registerMessageSerializer(channelId, StateTransferMessage.MSG_ID, StateTransferMessage.serializer);
         registerMessageSerializer(channelId, StateTransferReplyMessage.MSG_ID, StateTransferReplyMessage.serializer);
+        registerMessageSerializer(channelId, ResponseMessage.MSG_ID,ResponseMessage.serializer);
 
         /*-------------------- Register Message Handlers -------------------------- */
         registerMessageHandler(channelId, StateTransferMessage.MSG_ID, this::uponStateTransferMessage);
-        registerMessageHandler(channelId, StateTransferMessage.MSG_ID, this::uponStateTransferReplyMessage);
+        registerMessageHandler(channelId, ResponseMessage.MSG_ID,null, this::uponMsgFail);
+        registerMessageHandler(channelId, StateTransferReplyMessage.MSG_ID, this::uponStateTransferReplyMessage);
     }
 
     @Override
