@@ -1,7 +1,10 @@
 package Paxos.messages;
 
+import Paxos.Paxos;
 import io.netty.buffer.ByteBuf;
 import Paxos.PaxosOperation;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import pt.unl.fct.di.novasys.babel.generic.ProtoMessage;
 import pt.unl.fct.di.novasys.network.ISerializer;
 import pt.unl.fct.di.novasys.network.data.Host;
@@ -11,7 +14,7 @@ import java.util.UUID;
 
 
 public class PrepareOkMessage extends ProtoMessage {
-
+    private static final Logger logger = LogManager.getLogger(Paxos.class);
     public final static short MSG_ID = 103;
 
  
@@ -65,14 +68,21 @@ public class PrepareOkMessage extends ProtoMessage {
     public static ISerializer<PrepareOkMessage> serializer = new ISerializer<PrepareOkMessage>() {
         @Override
         public void serialize(PrepareOkMessage msg, ByteBuf out) throws IOException {
-        	Host.serializer.serialize(msg.dest, out);
+
+
+            Host.serializer.serialize(msg.dest, out);
             out.writeInt(msg.instance);
             out.writeInt(msg.proposer_seq);
             out.writeInt(msg.highAccept);
-            out.writeLong(msg.highOp.getOp_Id().getMostSignificantBits());
-            out.writeLong(msg.highOp.getOp_Id().getLeastSignificantBits());
-            out.writeInt(msg.highOp.getOp().length);
-            out.writeBytes(msg.highOp.getOp());
+            if(msg.highOp == null)
+                out.writeInt(1);
+            else {
+                out.writeInt(0);
+                out.writeLong(msg.highOp.getOp_Id().getMostSignificantBits());
+                out.writeLong(msg.highOp.getOp_Id().getLeastSignificantBits());
+                out.writeInt(msg.highOp.getOp().length);
+                out.writeBytes(msg.highOp.getOp());
+            }
         }
 
         @Override
@@ -81,13 +91,25 @@ public class PrepareOkMessage extends ProtoMessage {
             int instance = in.readInt();
             int proposer_seq = in.readInt();
             int highAccept = in.readInt();
-            long highBytes = in.readLong();
-            long lowBytes = in.readLong();
-            UUID opId = new UUID(highBytes, lowBytes);
-            byte[] op = new byte[in.readInt()];
-            in.readBytes(op);
-            PaxosOperation po = new PaxosOperation(op, opId);
-            return new PrepareOkMessage(dest, proposer_seq, highAccept, po, instance);
+
+            int isNull = in.readInt();
+
+            PaxosOperation po;
+            if(isNull == 1)
+                po = null;
+            else{
+                long highBytes = in.readLong();
+                long lowBytes = in.readLong();
+                UUID opId = new UUID(highBytes, lowBytes);
+                byte[] op = new byte[in.readInt()];
+                in.readBytes(op);
+                po = new PaxosOperation(op, opId);
+            }
+
+            PrepareOkMessage msg = new PrepareOkMessage(dest, proposer_seq, highAccept, po, instance);
+            //logger.info(msg.instance+", "+msg.highOp.getOp_Id().getLeastSignificantBits()+", "+msg.highOp.getOp().length);
+            return msg;
+
         }
     };
    

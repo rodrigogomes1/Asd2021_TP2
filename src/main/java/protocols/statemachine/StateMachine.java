@@ -1,6 +1,5 @@
 package protocols.statemachine;
 
-import protocols.agreement.IncorrectAgreement;
 import protocols.agreement.notifications.JoinedNotification;
 import protocols.agreement.requests.AddReplicaRequest;
 import protocols.app.HashApp;
@@ -23,6 +22,7 @@ import protocols.agreement.notifications.DecidedNotification;
 import protocols.agreement.requests.ProposeRequest;
 import protocols.statemachine.notifications.ExecuteNotification;
 import protocols.statemachine.requests.OrderRequest;
+import Paxos.Paxos;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -140,6 +140,10 @@ public class StateMachine extends GenericProtocol {
             membership = new LinkedList<>(initialMembership);
             membership.forEach(this::openConnection);
             triggerNotification(new JoinedNotification(membership, 0));
+
+            logger.info("Send request {}", nextInstance);
+            sendRequest(new ProposeRequest(nextInstance++, UUID.randomUUID(), new byte[0]),
+                    Paxos.PROTOCOL_ID);
         } else {
             state = State.JOINING;
             logger.info("Starting in JOINING as I am not part of initial membership");
@@ -160,7 +164,7 @@ public class StateMachine extends GenericProtocol {
         	//Maybe you should modify what is it that you are proposing so that you remember that this
         	//operation was issued by the application (and not an internal operation, check the uponDecidedNotification)
             sendRequest(new ProposeRequest(nextInstance++, request.getOpId(), request.getOperation()),
-                    IncorrectAgreement.PROTOCOL_ID);
+                    Paxos.PROTOCOL_ID);
         }
     }
 
@@ -178,6 +182,10 @@ public class StateMachine extends GenericProtocol {
     private void uponDecidedNotification(DecidedNotification notification, short sourceProto) {
         logger.debug("Received notification: " + notification);
         //Maybe we should make sure operations are executed in order?
+
+        logger.info("Receive {} Send request {}", notification.getInstance(), nextInstance);
+        sendRequest(new ProposeRequest(nextInstance++, UUID.randomUUID(), new byte[0]),
+                Paxos.PROTOCOL_ID);
 
         //TODO - enteder texto
         //You should be careful and check if this operation is an application operation (and send it up)
@@ -234,17 +242,17 @@ public class StateMachine extends GenericProtocol {
         hosts.add(host);
         waitStateTransfer.put(nextInstance, hosts);
         //Inform agreement protocol about new replica
-        sendRequest(new AddReplicaRequest(nextInstance, host), IncorrectAgreement.PROTOCOL_ID);
+        sendRequest(new AddReplicaRequest(nextInstance, host), Paxos.PROTOCOL_ID);
         // Send request to HashMap
         sendRequest(new CurrentStateRequest(nextInstance), HashApp.PROTO_ID);
     }
 
     private void uponStateTransferReplyMessage(StateTransferReplyMessage msg, Host host, short sourceProto, int channelId){
         sendRequest(new InstallStateRequest(msg.getState()), HashApp.PROTO_ID);
-
+        triggerNotification(new JoinedNotification(membership, msg.getInstance()));
         for(OrderRequest request : bufferOrderRequests){
             sendRequest(new ProposeRequest(nextInstance++, request.getOpId(), request.getOperation()),
-                    IncorrectAgreement.PROTOCOL_ID);
+                    Paxos.PROTOCOL_ID);
         }
         bufferOrderRequests = new ArrayList<>();
         state = State.ACTIVE;

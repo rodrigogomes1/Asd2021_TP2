@@ -35,11 +35,11 @@ import pt.unl.fct.di.novasys.network.data.Host;
 public class Paxos extends GenericProtocol {
 	
 
-	private static final Logger logger = LogManager.getLogger(IncorrectAgreement.class);
+	private static final Logger logger = LogManager.getLogger(Paxos.class);
 
 	    //Protocol information, to register in babel
 	    public final static short PROTOCOL_ID = 100;
-	    public final static String PROTOCOL_NAME = "EmptyAgreement";
+	    public final static String PROTOCOL_NAME = "Paxos";
 	    
 	    private final int paxosTimeutTime; //param: timeout for Paxos
 
@@ -58,7 +58,7 @@ public class Paxos extends GenericProtocol {
 	         paxosInstances= new HashMap<>();
 	         
 	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "5000")); //5 seconds
-	         
+
 	         /*--------------------- Register Timer Handlers ----------------------------- */
 	         registerTimerHandler(PaxosTimer.TIMER_ID, this::uponPaxosTimer);
 
@@ -94,7 +94,6 @@ public class Paxos extends GenericProtocol {
 	        registerMessageSerializer(cId, AcceptOkMessage.MSG_ID, AcceptOkMessage.serializer);
 	        /*---------------------- Register Message Handlers -------------------------- */
 	        try {
-	              registerMessageHandler(cId, BroadcastMessage.MSG_ID, this::uponBroadcastMessage, this::uponMsgFail);
 	              registerMessageHandler(cId, PrepareMessage.MSG_ID, this::uponPrepareMessage);
 	              registerMessageHandler(cId, PrepareOkMessage.MSG_ID, this::uponPrepareOkMessage);
 	              registerMessageHandler(cId, AcceptMessage.MSG_ID, this::uponAcceptMessage);
@@ -103,20 +102,7 @@ public class Paxos extends GenericProtocol {
 	            throw new AssertionError("Error registering message handler.", e);
 	        }
 	    }
-	    
-	    
-	    
-	    private void uponBroadcastMessage(BroadcastMessage msg, Host host, short sourceProto, int channelId) {
-	        if(joinedInstance >= 0 ){
-	            //Obviously your agreement protocols will not decide things as soon as you receive the first message
-	            triggerNotification(new DecidedNotification(msg.getInstance(), msg.getOpId(), msg.getOp()));
-	        } else {
-	            //We have not yet received a JoinedNotification, but we are already receiving messages from the other
-	            //agreement instances, maybe we should do something with them...?
-	        }
-	    }
-	    
-	    
+
 	    private void uponJoinedNotification(JoinedNotification notification, short sourceProto) {
 	        //We joined the system and can now start doing things
 	        joinedInstance = notification.getJoinInstance();
@@ -126,6 +112,9 @@ public class Paxos extends GenericProtocol {
 
 	    private void uponProposeRequest(ProposeRequest request, short sourceProto) {
 	        logger.debug("Received " + request);
+
+			logger.info("UponProposeRequest request {} {}", request.getInstance(), membership.size());
+
 	        byte[] op = request.getOperation();
 	        UUID opId= request.getOpId();
 	        PaxosInstance p = new PaxosInstance(myself, membership);
@@ -135,7 +124,9 @@ public class Paxos extends GenericProtocol {
 	        PrepareMessage prepMsg;
 	        for(Host member: p.getMembership()) {
 	        	prepMsg= new PrepareMessage(member,p.getProposer_seq(),request.getInstance());
+				//logger.info("Msgs propose: {}", getMetrics().toString());
 	        	sendMessage(prepMsg, member);
+				//logger.info("Msgs propose: {}", getMetrics().toString());
 	        }
 	        p.setPrepare_ok_set(new TreeMap<Integer,PaxosOperation>());
 	        
@@ -146,6 +137,7 @@ public class Paxos extends GenericProtocol {
 	    }
 	    
 	    private void uponPrepareMessage(PrepareMessage prepare,Host from, short sourceProto, int channelId) {
+			logger.info("UponPrepareMsg request {} {}", prepare.getInstance(), channelId);
 	    	if(joinedInstance!=-1 && prepare.getInstance()>=joinedInstance) {
 		    	PaxosInstance p= paxosInstances.get(prepare.getInstance());
 		    	if(p==null) {
@@ -154,21 +146,32 @@ public class Paxos extends GenericProtocol {
 		    	}
 		    	int sn=prepare.getProposer_Seq();
 		    	if(sn > p.getHighest_prepare()) {
+		    		logger.info("Prepare msg Dentro if {} {} {}", prepare.getInstance(), from, myself);
+					//logger.info("Msgs prepare:{}", getMetrics().toString());
 		    		p.setHighest_prepare(sn);
-		    		PrepareOkMessage prepOkMsg=new PrepareOkMessage(from,sn,p.getHighest_accept(),p.getHighest_Op(),prepare.getInstance()); 
+		    		PrepareOkMessage prepOkMsg=new PrepareOkMessage(from,sn,p.getHighest_accept(),p.getHighest_Op(),prepare.getInstance());
 		    		sendMessage(prepOkMsg, from);
-		    	}
+					//AcceptMessage acceptMsg= new AcceptMessage(from,p.getProposer_seq(),p.getProposer_op(),0,p.getMembership());
+					//sendMessage(acceptMsg, from);
+
+					//logger.info("Msgs prepare: {}", getMetrics().toString());
+					}
 		    	paxosInstances.put(prepare.getInstance(), p);
 	    	}
 	    }
 	    
 	    private void uponPrepareOkMessage(PrepareOkMessage prepareOk,Host from, short sourceProto, int channelId) {
-	    	if(joinedInstance!=-1 && prepareOk.getInstance()>=joinedInstance) {
-	    		
-	    		int sn= prepareOk.getProposer_Seq();
+			logger.info("UponPrepareOKMsg request {}", prepareOk.getInstance());
+			if(joinedInstance!=-1 && prepareOk.getInstance()>=joinedInstance) {
+
+
+				int sn= prepareOk.getProposer_Seq();
 		    	int na= prepareOk.gethighAccept();
 		    	PaxosOperation va= prepareOk.getHighOp();
 		    	PaxosInstance p= paxosInstances.get(prepareOk.getInstance());
+
+				logger.info("Dentro prepareOk IF {} {}", p.getProposer_seq(), sn);
+
 		    	if(p.getProposer_seq()==sn) {
 		    		p.add_To_Prepare_ok_set(na, va);
 		    		logger.info("Entrou no PrepareOK com size do prepareOkSet: "+p.getSize_Prepare_ok_set()+" .");
@@ -195,6 +198,7 @@ public class Paxos extends GenericProtocol {
 	    }
 	    
 	    private void uponAcceptMessage(AcceptMessage accept,Host from, short sourceProto, int channelId) {
+			logger.info("UponAcceptMsg request {}", accept.getInstance());
 	    	if(joinedInstance!=-1 && accept.getInstance()>=joinedInstance) {
 	    		int sn= accept.getSeq();
 		    	PaxosOperation op = accept.getOp();
@@ -225,6 +229,8 @@ public class Paxos extends GenericProtocol {
 	    
 	    
 	    private void uponAcceptOkMessage(AcceptOkMessage acceptOk,Host from, short sourceProto, int channelId) {
+			logger.info("UponAcceptOKMsg request {}", acceptOk.getInstance());
+
 	    	if(joinedInstance!=-1 && acceptOk.getInstance()>=joinedInstance) {
 	    		int sn= acceptOk.getSeq();
 		    	PaxosOperation op= acceptOk.getHighOp();
