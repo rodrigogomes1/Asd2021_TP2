@@ -22,10 +22,12 @@ public class PaxosInstance {
     private List<Host> membership;
     private PaxosOperation decided;
     private long timeOutId;
+	private int idx;
 	private static final Logger logger = LogManager.getLogger(PaxosInstance.class);
     
     
     public PaxosInstance(Host localProcessId,List<Host> membership,int idx) {
+		this.idx=idx;
     	proposer_seq=idx;
     	this.membership=membership;
     	proposer_op=null;
@@ -38,6 +40,10 @@ public class PaxosInstance {
     	decided=null;
     	timeOutId=-1;
     }
+
+	public int getIdx(){
+		return idx;
+	}
     
     public void setTimer(long timeoutId) {
     	this.timeOutId=timeoutId;

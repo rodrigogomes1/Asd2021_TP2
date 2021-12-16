@@ -144,12 +144,34 @@ public class StateMachine extends GenericProtocol {
             triggerNotification(new JoinedNotification(membership, 0));
 
             logger.info("Self {} initialMembership.get(0) {}", self, initialMembership.get(0));
-
+            if(self.equals(membership.get(0))){
                 logger.info("Send request {}", nextInstance);
                 Operation op = new Operation((byte)2, String.valueOf(self.getPort()), "Teste".getBytes(StandardCharsets.UTF_8));
                 UUID uid= new UUID(123,123);
-                sendRequest(new ProposeRequest(nextInstance++, uid, op.getData()),
+
+                sendRequest(new ProposeRequest(0, uid, op.getData()),
                         Paxos.PROTOCOL_ID);
+            }
+
+            if(self.equals(membership.get(1))) {
+                logger.info("Send request {}", nextInstance);
+                Operation op = new Operation((byte) 2, String.valueOf(self.getPort()), "Teste".getBytes(StandardCharsets.UTF_8));
+                UUID uid = new UUID(123, 123);
+
+                sendRequest(new ProposeRequest(0, uid, op.getData()),
+                        Paxos.PROTOCOL_ID);
+            }
+
+            if(self.equals(membership.get(2))) {
+                logger.info("Send request {}", nextInstance);
+                Operation op = new Operation((byte) 2, String.valueOf(self.getPort()), "Teste".getBytes(StandardCharsets.UTF_8));
+                UUID uid = new UUID(123, 123);
+
+                sendRequest(new ProposeRequest(0, uid, op.getData()),
+                        Paxos.PROTOCOL_ID);
+            }
+
+
 
 
         } else {
@@ -188,19 +210,8 @@ public class StateMachine extends GenericProtocol {
 
     /*--------------------------------- Notifications ---------------------------------------- */
     private void uponDecidedNotification(DecidedNotification notification, short sourceProto) {
-        logger.debug("Received notification: " + notification);
+        logger.info("Received notification: " + notification);
         //Maybe we should make sure operations are executed in order?
-
-        if(self== membership.get(0)){
-            logger.info("Receive {} Send request {}", notification.getInstance(), nextInstance);
-
-            while(nextInstance<5){
-                sendRequest(new ProposeRequest(nextInstance++, UUID.randomUUID(), new byte[0]),
-                        Paxos.PROTOCOL_ID);
-            }
-        }
-
-
 
         //TODO - enteder texto
         //You should be careful and check if this operation is an application operation (and send it up)
