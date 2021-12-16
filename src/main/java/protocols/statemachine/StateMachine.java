@@ -185,6 +185,7 @@ public class StateMachine extends GenericProtocol {
 
     /*--------------------------------- Requests ---------------------------------------- */
     private void uponOrderRequest(OrderRequest request, short sourceProto) {
+        logger.info("Receive request {}: {}, {}", self.getPort(), nextInstance, lastExecuted+1);
         logger.debug("Received request: " + request);
         if (state == State.JOINING) {
             //Do something smart (like buffering the requests)
@@ -193,7 +194,9 @@ public class StateMachine extends GenericProtocol {
             //Also do something starter, we don't want an infinite number of instances active
         	//Maybe you should modify what is it that you are proposing so that you remember that this
         	//operation was issued by the application (and not an internal operation, check the uponDecidedNotification)
-            sendRequest(new ProposeRequest(nextInstance++, request.getOpId(), request.getOperation()),
+            //sendRequest(new ProposeRequest(nextInstance++, request.getOpId(), request.getOperation()),
+            //        Paxos.PROTOCOL_ID);
+            sendRequest(new ProposeRequest(lastExecuted+1, request.getOpId(), request.getOperation()),
                     Paxos.PROTOCOL_ID);
         }
     }
@@ -210,7 +213,7 @@ public class StateMachine extends GenericProtocol {
 
     /*--------------------------------- Notifications ---------------------------------------- */
     private void uponDecidedNotification(DecidedNotification notification, short sourceProto) {
-        logger.info("Received notification11111: {} {}", lastExecuted, notification.getInstance());
+        //logger.info("Received notification11111: {} {}", lastExecuted, notification.getInstance());
         //Maybe we should make sure operations are executed in order?
 
         //TODO - enteder texto
