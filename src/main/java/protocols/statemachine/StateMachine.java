@@ -7,6 +7,7 @@ import protocols.app.messages.ResponseMessage;
 import protocols.app.requests.CurrentStateReply;
 import protocols.app.requests.CurrentStateRequest;
 import protocols.app.requests.InstallStateRequest;
+import protocols.app.utils.Operation;
 import protocols.statemachine.messages.StateTransferMessage;
 import protocols.statemachine.messages.StateTransferReplyMessage;
 import pt.unl.fct.di.novasys.babel.core.GenericProtocol;
@@ -27,6 +28,7 @@ import Paxos.Paxos;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -141,9 +143,15 @@ public class StateMachine extends GenericProtocol {
             membership.forEach(this::openConnection);
             triggerNotification(new JoinedNotification(membership, 0));
 
-            logger.info("Send request {}", nextInstance);
-            sendRequest(new ProposeRequest(nextInstance++, UUID.randomUUID(), new byte[0]),
-                    Paxos.PROTOCOL_ID);
+            logger.info("Self {} initialMembership.get(0) {}", self, initialMembership.get(0));
+
+                logger.info("Send request {}", nextInstance);
+                Operation op = new Operation((byte)2, String.valueOf(self.getPort()), "Teste".getBytes(StandardCharsets.UTF_8));
+                UUID uid= new UUID(123,123);
+                sendRequest(new ProposeRequest(nextInstance++, uid, op.getData()),
+                        Paxos.PROTOCOL_ID);
+
+
         } else {
             state = State.JOINING;
             logger.info("Starting in JOINING as I am not part of initial membership");
@@ -183,9 +191,16 @@ public class StateMachine extends GenericProtocol {
         logger.debug("Received notification: " + notification);
         //Maybe we should make sure operations are executed in order?
 
-        logger.info("Receive {} Send request {}", notification.getInstance(), nextInstance);
-        sendRequest(new ProposeRequest(nextInstance++, UUID.randomUUID(), new byte[0]),
-                Paxos.PROTOCOL_ID);
+        if(self== membership.get(0)){
+            logger.info("Receive {} Send request {}", notification.getInstance(), nextInstance);
+
+            while(nextInstance<5){
+                sendRequest(new ProposeRequest(nextInstance++, UUID.randomUUID(), new byte[0]),
+                        Paxos.PROTOCOL_ID);
+            }
+        }
+
+
 
         //TODO - enteder texto
         //You should be careful and check if this operation is an application operation (and send it up)

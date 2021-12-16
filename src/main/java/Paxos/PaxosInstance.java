@@ -6,6 +6,8 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import pt.unl.fct.di.novasys.network.data.Host;
 
 public class PaxosInstance {
@@ -15,22 +17,23 @@ public class PaxosInstance {
     private int highest_prepare;
     private int highest_accept;
     private PaxosOperation highest_Op;
-    private TreeMap<Integer, PaxosOperation> prepare_ok_set;
+    private TreeMap<Integer, ArrayList<PaxosOperation>> prepare_ok_set;
     private TreeMap<Integer,ArrayList<PaxosOperation>> accept_ok_set;
     private List<Host> membership;
     private PaxosOperation decided;
     private long timeOutId;
+	private static final Logger logger = LogManager.getLogger(PaxosInstance.class);
     
     
-    public PaxosInstance(Host localProcessId,List<Host> membership) {
-    	proposer_seq=localProcessId.hashCode();
+    public PaxosInstance(Host localProcessId,List<Host> membership,int idx) {
+    	proposer_seq=idx;
     	this.membership=membership;
     	proposer_op=null;
     	highest_prepare=0;
     	highest_accept=0;
     	highest_Op=null;
     	
-    	prepare_ok_set=new TreeMap<Integer, PaxosOperation>();
+    	prepare_ok_set=new TreeMap<Integer, ArrayList<PaxosOperation>>();
     	accept_ok_set = new TreeMap<Integer, ArrayList<PaxosOperation>>();
     	decided=null;
     	timeOutId=-1;
@@ -96,24 +99,33 @@ public class PaxosInstance {
 	}
 
 
-	public TreeMap<Integer, PaxosOperation> getPrepare_ok_set() {
+	public TreeMap<Integer, ArrayList<PaxosOperation>> getPrepare_ok_set() {
+
 		return prepare_ok_set;
 	}
 
 
-	public void setPrepare_ok_set(TreeMap<Integer,PaxosOperation> prepate_ok_set) {
+	public void setPrepare_ok_set(TreeMap<Integer,ArrayList<PaxosOperation>> prepate_ok_set) {
 		this.prepare_ok_set = prepate_ok_set;
 	}
 	
 	public void add_To_Prepare_ok_set(int seqN, PaxosOperation operation ){
-		prepare_ok_set.put(seqN, operation);
+		ArrayList<PaxosOperation> paxList=prepare_ok_set.get(seqN);
+		if(paxList==null) {
+			paxList= new ArrayList<>();
+		}
+		paxList.add(operation);
+		prepare_ok_set.put(seqN, paxList);
 	}
 	
-	public int getSize_Prepare_ok_set() {
-		return prepare_ok_set.keySet().size();
+	public int getSize_Prepare_ok_set(int sn) {
+		if(prepare_ok_set.get(sn)==null) {
+			return 0;
+		}
+		return prepare_ok_set.get(sn).size();
 	}
 	
-	public Entry<Integer, PaxosOperation> getHighest_Of_Prepare_ok_set() {
+	public Entry<Integer, ArrayList<PaxosOperation>> getHighest_Of_Prepare_ok_set() {
 		return prepare_ok_set.lastEntry();
 	}
 
