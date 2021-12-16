@@ -68,7 +68,7 @@ public class StateMachine extends GenericProtocol {
         nextInstance = 0;
         waitStateTransfer = new HashMap<>();
         bufferOrderRequests = new ArrayList<>();
-        lastExecuted = 0;
+        lastExecuted = -1;
 
         //[lastExecuted+2, lastExecuted+3, ...]
         //waiting for execute = nulls
@@ -144,7 +144,7 @@ public class StateMachine extends GenericProtocol {
             triggerNotification(new JoinedNotification(membership, 0));
 
             logger.info("Self {} initialMembership.get(0) {}", self, initialMembership.get(0));
-            if(self.equals(membership.get(0))){
+            /*if(self.equals(membership.get(0))){
                 logger.info("Send request {}", nextInstance);
                 Operation op = new Operation((byte)2, String.valueOf(self.getPort()), "Teste".getBytes(StandardCharsets.UTF_8));
                 UUID uid= new UUID(123,123);
@@ -170,7 +170,7 @@ public class StateMachine extends GenericProtocol {
                 sendRequest(new ProposeRequest(0, uid, op.getData()),
                         Paxos.PROTOCOL_ID);
             }
-
+            */
 
 
 
@@ -210,7 +210,7 @@ public class StateMachine extends GenericProtocol {
 
     /*--------------------------------- Notifications ---------------------------------------- */
     private void uponDecidedNotification(DecidedNotification notification, short sourceProto) {
-        logger.info("Received notification: " + notification);
+        logger.info("Received notification11111: {} {}", lastExecuted, notification.getInstance());
         //Maybe we should make sure operations are executed in order?
 
         //TODO - enteder texto
@@ -219,23 +219,28 @@ public class StateMachine extends GenericProtocol {
 
         //triggerNotification(new ExecuteNotification(notification.getOpId(), notification.getOperation()));
 
+
+
         ExecuteNotification execNotif = new ExecuteNotification(notification.getOpId(), notification.getOperation());
-        if(lastExecuted == notification.getInstance()+1){
+        if(lastExecuted+1 == notification.getInstance()){
             lastExecuted++;
             triggerNotification(execNotif);
-            execNotif = bufferExecuteNotifications.get(0);
-            while(execNotif != null){
-                triggerNotification(execNotif);
-                lastExecuted++;
-                bufferExecuteNotifications.remove(0);
 
-                if(bufferExecuteNotifications.size() == 0)
-                    execNotif = null;
-                else
-                 execNotif = bufferExecuteNotifications.get(0);
+            if(bufferExecuteNotifications.size() != 0) {
+                execNotif = bufferExecuteNotifications.get(0);
+                while (execNotif != null) {
+                    triggerNotification(execNotif);
+                    lastExecuted++;
+                    bufferExecuteNotifications.remove(0);
+
+                    if (bufferExecuteNotifications.size() == 0)
+                        execNotif = null;
+                    else
+                        execNotif = bufferExecuteNotifications.get(0);
+                }
             }
 
-        }else if(lastExecuted > notification.getInstance()+1){
+        }else if(lastExecuted+1 < notification.getInstance()){
             int dif = notification.getInstance() - lastExecuted;
             int idx = dif-2;
 

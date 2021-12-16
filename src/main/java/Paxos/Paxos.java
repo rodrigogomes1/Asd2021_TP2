@@ -79,7 +79,7 @@ public class Paxos extends GenericProtocol {
 	    private void uponChannelCreated(ChannelReadyNotification notification, short sourceProto) {
 	        int cId = notification.getChannelId();
 	        myself = notification.getMyself();
-	        logger.info("Channel {} created, I am {}", cId, myself);
+			//logger.info("Channel {} created, I am {}", cId, myself);
 	        // Allows this protocol to receive events from this channel.
 	        registerSharedChannel(cId);
 	        
@@ -105,7 +105,7 @@ public class Paxos extends GenericProtocol {
 	        joinedInstance = notification.getJoinInstance();
 	        membership = new LinkedList<>(notification.getMembership());
 			idx=getIndexReplica();
-	        logger.info("Agreement starting at instance {},  membership: {}", joinedInstance, membership);
+			//logger.info("Agreement starting at instance {},  membership: {}", joinedInstance, membership);
 	    }
 		private int getIndexReplica(){
 			int i=0;
@@ -119,7 +119,7 @@ public class Paxos extends GenericProtocol {
 		}
 
 	    private void uponProposeRequest(ProposeRequest request, short sourceProto) {
-			logger.info("UponProposeRequest request {} {}", request.getInstance(), membership.size());
+			//logger.info("UponProposeRequest request {} {}", request.getInstance(), membership.size());
 
 	        byte[] op = request.getOperation();
 	        UUID opId= request.getOpId();
@@ -142,7 +142,7 @@ public class Paxos extends GenericProtocol {
 	    }
 	    
 	    private void uponPrepareMessage(PrepareMessage prepare,Host from, short sourceProto, int channelId) {
-			logger.info("UponPrepareMsg request {} {}", prepare.getInstance(), channelId);
+			//logger.info("UponPrepareMsg request {} {}", prepare.getInstance(), channelId);
 	    	if(joinedInstance!=-1 && prepare.getInstance()>=joinedInstance) {
 
 		    	PaxosInstance p= paxosInstances.get(prepare.getInstance());
@@ -152,9 +152,9 @@ public class Paxos extends GenericProtocol {
 		    	}
 
 		    	int sn=prepare.getProposer_Seq();
-				logger.info("Entrou no Prepare if + sn:"+ sn + "  p.getHighest_prepare(): "+ p.getHighest_prepare());
+				//logger.info("Entrou no Prepare if + sn:"+ sn + "  p.getHighest_prepare(): "+ p.getHighest_prepare());
 		    	if(sn > p.getHighest_prepare()) {
-		    		logger.info("Prepare msg Dentro if {} {} {}", prepare.getInstance(), from, myself);
+					//logger.info("Prepare msg Dentro if {} {} {}", prepare.getInstance(), from, myself);
 		    		p.setHighest_prepare(sn);
 		    		PrepareOkMessage prepOkMsg=new PrepareOkMessage(from,sn,p.getHighest_accept(),p.getHighest_Op(),prepare.getInstance());
 		    		sendMessage(prepOkMsg, from);
@@ -164,7 +164,7 @@ public class Paxos extends GenericProtocol {
 	    }
 	    
 	    private void uponPrepareOkMessage(PrepareOkMessage prepareOk,Host from, short sourceProto, int channelId) {
-			logger.info("UponPrepareOKMsg request {}", prepareOk.getInstance());
+			//logger.info("UponPrepareOKMsg request {}", prepareOk.getInstance());
 			if(joinedInstance!=-1 && prepareOk.getInstance()>=joinedInstance) {
 
 
@@ -173,13 +173,13 @@ public class Paxos extends GenericProtocol {
 		    	PaxosOperation va= prepareOk.getHighOp();
 		    	PaxosInstance p= paxosInstances.get(prepareOk.getInstance());
 
-				logger.info("Dentro prepareOk IF p.getProposer_seq() {} sn {}", p.getProposer_seq(), sn);
+				//logger.info("Dentro prepareOk IF p.getProposer_seq() {} sn {}", p.getProposer_seq(), sn);
 
 		    	if(p.getProposer_seq()==sn) {
-					logger.info("Adicionou ao prepareOkSet: na- "+na+" .");
+					//logger.info("Adicionou ao prepareOkSet: na- "+na+" .");
 		    		p.add_To_Prepare_ok_set(na, va);
 		    		if(p.getSize_Prepare_ok_set(na) >= (p.getMembership().size()/2)+1) {
-						logger.info("Entrou no If do prepareOkSet");
+						//logger.info("Entrou no If do prepareOkSet");
 		    			Entry<Integer, ArrayList<PaxosOperation>> highestEntry= p.getHighest_Of_Prepare_ok_set();
 		    			if(highestEntry!=null && highestEntry.getValue()!=null && highestEntry.getValue().get(0)!=null) {
 		    				PaxosOperation op= highestEntry.getValue().get(0);
@@ -202,7 +202,7 @@ public class Paxos extends GenericProtocol {
 	    }
 	    
 	    private void uponAcceptMessage(AcceptMessage accept,Host from, short sourceProto, int channelId) {
-			logger.info("UponAcceptMsg request {}", accept.getInstance());
+			//logger.info("UponAcceptMsg request {}", accept.getInstance());
 	    	if(joinedInstance!=-1 && accept.getInstance()>=joinedInstance) {
 	    		int sn= accept.getSeq();
 		    	PaxosOperation op = accept.getOp();
@@ -214,7 +214,7 @@ public class Paxos extends GenericProtocol {
 		    	}
 		    	
 		    	p.setMembership(accept.getMembership());
-				logger.info("Dentro accept IF {} {}", p.getHighest_prepare(), sn);
+				//logger.info("Dentro accept IF {} {}", p.getHighest_prepare(), sn);
 		    	if(sn >= p.getHighest_prepare()) {
 		    		p.setHighest_prepare(sn);
 		    		p.setHighest_accept(sn);
@@ -232,15 +232,26 @@ public class Paxos extends GenericProtocol {
 	    
 	    
 	    private void uponAcceptOkMessage(AcceptOkMessage acceptOk,Host from, short sourceProto, int channelId) {
-			logger.info("UponAcceptOKMsg request {}", acceptOk.getInstance());
+			//logger.info("UponAcceptOKMsg request {}", acceptOk.getInstance());
 
 	    	if(joinedInstance!=-1 && acceptOk.getInstance()>=joinedInstance) {
 	    		int sn= acceptOk.getSeq();
 		    	PaxosOperation op= acceptOk.getHighOp();
-		    	PaxosInstance p= paxosInstances.get(acceptOk.getInstance());
-		    	
-		    	Entry<Integer, ArrayList<PaxosOperation>> entry = p.getAccept_ok_set().firstEntry();
-		    	logger.info("Entrou no AcceptOk com size do acceptOkSet: "+p.getSize_Accept_ok_set()+" .");
+
+
+				PaxosInstance p= paxosInstances.get(acceptOk.getInstance());
+				if(p==null) {
+					p = new PaxosInstance(from, membership,idx);
+					paxosInstances.put(acceptOk.getInstance(), p);
+				}
+
+
+				//logger.info("AcceptOkMsg 1 {}", p);
+				//logger.info("AcceptOkMsg 2{}", p.getAccept_ok_set());
+				//logger.info("AcceptOkMsg 3{}", p.getAccept_ok_set().firstEntry());
+
+				Entry<Integer, ArrayList<PaxosOperation>> entry = p.getAccept_ok_set().firstEntry();
+				//logger.info("Entrou no AcceptOk com size do acceptOkSet: "+p.getSize_Accept_ok_set()+" .");
 
 	    		if(entry==null || (entry.getKey()==sn && op.equals(entry.getValue().get(0))) ){
 	    			p.add_To_Accept_ok_set(sn, op);
@@ -254,10 +265,10 @@ public class Paxos extends GenericProtocol {
 		    		p.setDecided(op);
 		    		triggerNotification(new DecidedNotification(acceptOk.getInstance(), op.getOp_Id(), op.getOp()));
 
-					logger.info("DECIDIU com: sn"+ sn + " p.getProposer_seq() "+ p.getProposer_seq());
+					//logger.info("DECIDIU com: sn"+ sn + " p.getProposer_seq() "+ p.getProposer_seq());
 
 					if(sn==p.getProposer_seq()) {
-						logger.info("Cancela Timer: da instancia "+acceptOk.getInstance()+" , do processo "+p.getIdx());
+						//logger.info("Cancela Timer: da instancia "+acceptOk.getInstance()+" , do processo "+p.getIdx());
 		    			this.cancelTimer(p.getTimer());
 		    		}
 		    	}
@@ -287,11 +298,11 @@ public class Paxos extends GenericProtocol {
 	   
 	    
 	    private void uponAddReplica(AddReplicaRequest request, short sourceProto) {
-	        logger.debug("Received " + request);
+	        logger.info("Received " + request);
 	        //The AddReplicaRequest contains an "instance" field, which we ignore in this incorrect protocol.
 	        //You should probably take it into account while doing whatever you do here.
 	        if(request.getReplica()==myself) {
-	        	logger.debug("Received " + request+" of myself in instance: "+request.getInstance());
+	        	logger.info("Received " + request+" of myself in instance: "+request.getInstance());
 	        	joinedInstance=request.getInstance();
 	        }
 	        
@@ -299,9 +310,9 @@ public class Paxos extends GenericProtocol {
 	    }
 	    
 	    private void uponRemoveReplica(RemoveReplicaRequest request, short sourceProto) {
-	        logger.debug("Received " + request);
+	        logger.info("Received " + request);
 	        if(request.getReplica()==myself) {
-	        	logger.debug("Received " + request+" of myself in instance:"+request.getInstance());
+	        	logger.info("Received " + request+" of myself in instance:"+request.getInstance());
 	        	joinedInstance=-1;
 	        }
 	        
