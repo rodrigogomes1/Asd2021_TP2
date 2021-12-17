@@ -260,15 +260,14 @@ public class Paxos extends GenericProtocol {
 	    			p.setAccept_ok_set(newSet);
 	    			p.add_To_Accept_ok_set(sn, op);
 	       		}
-		    	
+
 		    	if( p.getDecided()==null && p.getSize_Accept_ok_set() >= (p.getMembership().size()/2)+1 ) {
 		    		p.setDecided(op);
 		    		triggerNotification(new DecidedNotification(acceptOk.getInstance(), op.getOp_Id(), op.getOp()));
 
-					//logger.info("DECIDIU com: sn"+ sn + " p.getProposer_seq() "+ p.getProposer_seq());
-
+					logger.info("DECIDIU com: sn"+ sn + " p.getProposer_seq() "+ p.getProposer_seq()+" com opId: "+ op.getOp_Id() );
 					if(sn==p.getProposer_seq()) {
-						//logger.info("Cancela Timer: da instancia "+acceptOk.getInstance()+" , do processo "+p.getIdx());
+						logger.info("Cancela Timer: "+p.getTimer() + " in instance: "+acceptOk.getInstance());
 		    			this.cancelTimer(p.getTimer());
 		    		}
 		    	}
@@ -279,11 +278,12 @@ public class Paxos extends GenericProtocol {
 	    
 	    private void uponPaxosTimer(PaxosTimer pTimer, long timerId) {
 	    	int instN=pTimer.getInstance();
-	        logger.info("Paxos Timeout with instance number "+instN+" .");
 			PaxosInstance p = paxosInstances.get(instN);
-
+			logger.info("Timeout do timer: "+p.getTimer());
+			logger.info("Paxos Timeout with instance number "+instN+" and op: "+ p.getHighest_Op().getOp_Id() );
+			logger.info("Timeout with getDecided " + p.getDecided().getOp_Id());
 			if(p.getDecided()==null) {
-				p.setProposer_seq(p.getProposer_seq()+membership.size());
+				p.setProposer_seq(p.getProposer_seq()+p.getMembership().size());
 				PrepareMessage prepMsg;
 				for(Host member: p.getMembership()) {
 					prepMsg= new PrepareMessage(member,p.getProposer_seq(),instN);

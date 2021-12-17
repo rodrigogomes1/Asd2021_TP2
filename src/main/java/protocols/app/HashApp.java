@@ -110,11 +110,12 @@ public class HashApp extends GenericProtocol {
     }
 
     private void uponRequestMessage(RequestMessage msg, Host host, short sourceProto, int channelId) {
-        logger.info("Request received: from " + host.getPort());
+
         logger.debug("Request received: " + msg + " from " + host);
         UUID opUUID = UUID.randomUUID();
         clientIdMapper.put(opUUID, Pair.of(host, msg.getOpId()));
         Operation op = new Operation(msg.getOpType(), msg.getKey(), msg.getData());
+        logger.info("Request received: from " + host.getPort()+ " of op with id: "+ opUUID);
         try {
             sendRequest(new OrderRequest(opUUID, op.toByteArray()), StateMachine.PROTOCOL_ID);
         } catch (IOException e) {
@@ -131,7 +132,7 @@ public class HashApp extends GenericProtocol {
             cumulativeHash = appendOpToHash(cumulativeHash, op.getData());
 
             logger.debug("Executing: " + op);
-            logger.info("Executing: {}",executedOps);
+            //logger.info("Executing: {}",executedOps);
             //Execute if it is a write operation
             if (op.getOpType() == RequestMessage.WRITE)
                 data.put(op.getKey(), op.getData());

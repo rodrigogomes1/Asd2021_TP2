@@ -24,6 +24,7 @@ import protocols.agreement.requests.ProposeRequest;
 import protocols.statemachine.notifications.ExecuteNotification;
 import protocols.statemachine.requests.OrderRequest;
 import Paxos.Paxos;
+import Paxos.PaxosOperation;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -60,15 +61,20 @@ public class StateMachine extends GenericProtocol {
 
     private Map<Integer, List<Host>> waitStateTransfer;
     private List<OrderRequest> bufferOrderRequests;
+    private List<OrderRequest> waitingList;
+    private Map<Integer,PaxosOperation> myInstances;
     private int lastExecuted;
+    private boolean executing=false;
     private Vector<ExecuteNotification> bufferExecuteNotifications;
 
     public StateMachine(Properties props) throws IOException, HandlerRegistrationException {
         super(PROTOCOL_NAME, PROTOCOL_ID);
         nextInstance = 0;
         waitStateTransfer = new HashMap<>();
+        waitingList = new ArrayList<>();
         bufferOrderRequests = new ArrayList<>();
         lastExecuted = -1;
+        myInstances = new HashMap<>();
 
         //[lastExecuted+2, lastExecuted+3, ...]
         //waiting for execute = nulls
@@ -151,29 +157,7 @@ public class StateMachine extends GenericProtocol {
 
                 sendRequest(new ProposeRequest(0, uid, op.getData()),
                         Paxos.PROTOCOL_ID);
-            }
-
-            if(self.equals(membership.get(1))) {
-                logger.info("Send request {}", nextInstance);
-                Operation op = new Operation((byte) 2, String.valueOf(self.getPort()), "Teste".getBytes(StandardCharsets.UTF_8));
-                UUID uid = new UUID(123, 123);
-
-                sendRequest(new ProposeRequest(0, uid, op.getData()),
-                        Paxos.PROTOCOL_ID);
-            }
-
-            if(self.equals(membership.get(2))) {
-                logger.info("Send request {}", nextInstance);
-                Operation op = new Operation((byte) 2, String.valueOf(self.getPort()), "Teste".getBytes(StandardCharsets.UTF_8));
-                UUID uid = new UUID(123, 123);
-
-                sendRequest(new ProposeRequest(0, uid, op.getData()),
-                        Paxos.PROTOCOL_ID);
-            }
-            */
-
-
-
+            }*/
         } else {
             state = State.JOINING;
             logger.info("Starting in JOINING as I am not part of initial membership");
@@ -185,8 +169,8 @@ public class StateMachine extends GenericProtocol {
 
     /*--------------------------------- Requests ---------------------------------------- */
     private void uponOrderRequest(OrderRequest request, short sourceProto) {
-        logger.info("Receive request {}: {}, {}", self.getPort(), nextInstance, lastExecuted+1);
-        logger.debug("Received request: " + request);
+        logger.info("Receive request {}: {}, {} of Operation with id: {}", self.getPort(), nextInstance, lastExecuted+1, request.getOpId());
+        logger.debug("Received request: opId " + request.getOpId());
         if (state == State.JOINING) {
             //Do something smart (like buffering the requests)
             bufferOrderRequests.add(request);
@@ -196,8 +180,19 @@ public class StateMachine extends GenericProtocol {
         	//operation was issued by the application (and not an internal operation, check the uponDecidedNotification)
             //sendRequest(new ProposeRequest(nextInstance++, request.getOpId(), request.getOperation()),
             //        Paxos.PROTOCOL_ID);
-            sendRequest(new ProposeRequest(lastExecuted+1, request.getOpId(), request.getOperation()),
-                    Paxos.PROTOCOL_ID);
+            waitingList.add(request);
+            if(!waitingList.isEmpty() && !executing){
+                OrderRequest r= waitingList.get(0);
+                sendRequest(new ProposeRequest(lastExecuted+1, r.getOpId(), r.getOperation()),
+                        Paxos.PROTOCOL_ID);
+                PaxosOperation p = new PaxosOperation(request.getOperation(),request.getOpId());
+                lastExecuted++;
+                myInstances.put(lastExecuted+1,new PaxosOperation(r.getOperation(),r.getOpId()));
+            }
+
+
+
+
         }
     }
 
@@ -221,14 +216,27 @@ public class StateMachine extends GenericProtocol {
         //or if this is an operations that was executed by the state machine itself (in which case you should execute)
 
         //triggerNotification(new ExecuteNotification(notification.getOpId(), notification.getOperation()));
-
-
-
         ExecuteNotification execNotif = new ExecuteNotification(notification.getOpId(), notification.getOperation());
+        triggerNotification(execNotif);
+        logger.info("Execute Op with id: {} in instance {}",notification.getOpId(), notification.getInstance());
+        if(!myInstances.keySet().contains(notification.getInstance())){
+            if(notification.getInstance()>lastExecuted+1){
+                lastExecuted = notification.getInstance()+1;
+                myInstances.put(lastExecuted+1,new PaxosOperation(notification.getOperation(),notification.getOpId()));
+            }
+        }else{
+            executing=false;
+            waitingList.remove(0);
+            myInstances.remove(notification.getInstance());
+        }
+
+
+        /*
+        //ExecuteNotification execNotif = new ExecuteNotification(notification.getOpId(), notification.getOperation());
         if(lastExecuted+1 == notification.getInstance()){
             lastExecuted++;
             triggerNotification(execNotif);
-
+            logger.info("Execute Op with id: {} in instance {}",notification.getOpId(), notification.getInstance());
             if(bufferExecuteNotifications.size() != 0) {
                 execNotif = bufferExecuteNotifications.get(0);
                 while (execNotif != null) {
@@ -256,7 +264,7 @@ public class StateMachine extends GenericProtocol {
                 bufferExecuteNotifications.add(execNotif);
             }
         }//else, smaller than lastExecuted, just ignore
-
+    */
 
     }
 
