@@ -115,7 +115,7 @@ public class HashApp extends GenericProtocol {
         UUID opUUID = UUID.randomUUID();
         clientIdMapper.put(opUUID, Pair.of(host, msg.getOpId()));
         Operation op = new Operation(msg.getOpType(), msg.getKey(), msg.getData());
-        logger.info("Request received: from " + host.getPort()+ " of op with id: "+ opUUID);
+        //logger.info("Request received: from " + host.getPort()+ " of op with id: "+ opUUID);
         try {
             sendRequest(new OrderRequest(opUUID, op.toByteArray()), StateMachine.PROTOCOL_ID);
         } catch (IOException e) {
@@ -137,7 +137,7 @@ public class HashApp extends GenericProtocol {
             if (op.getOpType() == RequestMessage.WRITE)
                 data.put(op.getKey(), op.getData());
             executedOps++;
-            if (executedOps % 10000 == 0) {
+            if (executedOps % 10 == 0) {
                 logger.info("Current state N_OPS= {}, MAP_SIZE={}, HASH={}",
                         executedOps, data.size(), Hex.encodeHexString(cumulativeHash));
             }

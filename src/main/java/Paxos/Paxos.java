@@ -28,7 +28,7 @@ import pt.unl.fct.di.novasys.network.data.Host;
 public class Paxos extends GenericProtocol {
 	
 
-	private static final Logger logger = LogManager.getLogger(Paxos.class);
+	//private static final Logger logger = LogManager.getLogger(Paxos.class);
 
 	    //Protocol information, to register in babel
 	    public final static short PROTOCOL_ID = 100;
@@ -265,9 +265,9 @@ public class Paxos extends GenericProtocol {
 		    		p.setDecided(op);
 		    		triggerNotification(new DecidedNotification(acceptOk.getInstance(), op.getOp_Id(), op.getOp()));
 
-					logger.info("DECIDIU com: sn"+ sn + " p.getProposer_seq() "+ p.getProposer_seq()+" com opId: "+ op.getOp_Id() );
+					//logger.info("DECIDIU com: sn"+ sn + " p.getProposer_seq() "+ p.getProposer_seq()+" com opId: "+ op.getOp_Id() );
 					if(sn==p.getProposer_seq()) {
-						logger.info("Cancela Timer: "+p.getTimer() + " in instance: "+acceptOk.getInstance());
+						//logger.info("Cancela Timer: "+p.getTimer() + " in instance: "+acceptOk.getInstance());
 		    			this.cancelTimer(p.getTimer());
 		    		}
 		    	}
@@ -279,9 +279,9 @@ public class Paxos extends GenericProtocol {
 	    private void uponPaxosTimer(PaxosTimer pTimer, long timerId) {
 	    	int instN=pTimer.getInstance();
 			PaxosInstance p = paxosInstances.get(instN);
-			logger.info("Timeout do timer: "+p.getTimer());
-			logger.info("Paxos Timeout with instance number "+instN+" and op: "+ p.getHighest_Op().getOp_Id() );
-			logger.info("Timeout with getDecided " + p.getDecided().getOp_Id());
+			//logger.info("Timeout do timer: "+p.getTimer());
+			//logger.info("Paxos Timeout with instance number "+instN+" and op: "+ p.getHighest_Op().getOp_Id() );
+			//logger.info("Timeout with getDecided " + p.getDecided().getOp_Id());
 			if(p.getDecided()==null) {
 				p.setProposer_seq(p.getProposer_seq()+p.getMembership().size());
 				PrepareMessage prepMsg;
@@ -298,11 +298,11 @@ public class Paxos extends GenericProtocol {
 	   
 	    
 	    private void uponAddReplica(AddReplicaRequest request, short sourceProto) {
-	        logger.info("Received " + request);
+	        //logger.info("Received " + request);
 	        //The AddReplicaRequest contains an "instance" field, which we ignore in this incorrect protocol.
 	        //You should probably take it into account while doing whatever you do here.
 	        if(request.getReplica()==myself) {
-	        	logger.info("Received " + request+" of myself in instance: "+request.getInstance());
+	        	//logger.info("Received " + request+" of myself in instance: "+request.getInstance());
 	        	joinedInstance=request.getInstance();
 	        }
 	        
@@ -310,9 +310,9 @@ public class Paxos extends GenericProtocol {
 	    }
 	    
 	    private void uponRemoveReplica(RemoveReplicaRequest request, short sourceProto) {
-	        logger.info("Received " + request);
+	        //logger.info("Received " + request);
 	        if(request.getReplica()==myself) {
-	        	logger.info("Received " + request+" of myself in instance:"+request.getInstance());
+	        	//logger.info("Received " + request+" of myself in instance:"+request.getInstance());
 	        	joinedInstance=-1;
 	        }
 	        
@@ -324,7 +324,7 @@ public class Paxos extends GenericProtocol {
 
 	    private void uponMsgFail(ProtoMessage msg, Host host, short destProto, Throwable throwable, int channelId) {
 	        //If a message fails to be sent, for whatever reason, log the message and the reason
-	        logger.error("Message {} to {} failed, reason: {}", msg, host, throwable);
+	        //logger.error("Message {} to {} failed, reason: {}", msg, host, throwable);
 	    }
 
 }
