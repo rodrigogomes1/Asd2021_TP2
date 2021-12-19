@@ -12,7 +12,6 @@ import Paxos.messages.AcceptOkMessage;
 import Paxos.messages.PrepareMessage;
 import Paxos.messages.PrepareOkMessage;
 import Paxos.timers.PaxosTimer;
-import protocols.agreement.IncorrectAgreement;
 import protocols.agreement.messages.BroadcastMessage;
 import protocols.agreement.notifications.DecidedNotification;
 import protocols.agreement.notifications.JoinedNotification;
@@ -28,7 +27,7 @@ import pt.unl.fct.di.novasys.network.data.Host;
 public class Paxos extends GenericProtocol {
 	
 
-	//private static final Logger logger = LogManager.getLogger(Paxos.class);
+		private static final Logger logger = LogManager.getLogger(Paxos.class);
 
 	    //Protocol information, to register in babel
 	    public final static short PROTOCOL_ID = 100;
@@ -54,7 +53,7 @@ public class Paxos extends GenericProtocol {
 	         paxosInstances= new HashMap<>();
 
 	         
-	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "5000")); //5 seconds
+	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "10000")); //5 seconds
 
 	         /*--------------------- Register Timer Handlers ----------------------------- */
 	         registerTimerHandler(PaxosTimer.TIMER_ID, this::uponPaxosTimer);
@@ -119,7 +118,7 @@ public class Paxos extends GenericProtocol {
 		}
 
 	    private void uponProposeRequest(ProposeRequest request, short sourceProto) {
-			//logger.info("UponProposeRequest request {} {}", request.getInstance(), membership.size());
+			logger.info("UponProposeRequest request in instance {} with membership size {}", request.getInstance(), membership.size());
 
 	        byte[] op = request.getOperation();
 	        UUID opId= request.getOpId();
@@ -152,7 +151,7 @@ public class Paxos extends GenericProtocol {
 		    	}
 
 		    	int sn=prepare.getProposer_Seq();
-				//logger.info("Entrou no Prepare if + sn:"+ sn + "  p.getHighest_prepare(): "+ p.getHighest_prepare());
+				logger.info("Entrou no Prepare if + sn:"+ sn + "  p.getHighest_prepare(): "+ p.getHighest_prepare() + " in instance " + prepare.getInstance());
 		    	if(sn > p.getHighest_prepare()) {
 					//logger.info("Prepare msg Dentro if {} {} {}", prepare.getInstance(), from, myself);
 		    		p.setHighest_prepare(sn);
@@ -173,7 +172,7 @@ public class Paxos extends GenericProtocol {
 		    	PaxosOperation va= prepareOk.getHighOp();
 		    	PaxosInstance p= paxosInstances.get(prepareOk.getInstance());
 
-				//logger.info("Dentro prepareOk IF p.getProposer_seq() {} sn {}", p.getProposer_seq(), sn);
+				//logger.info("Dentro prepareOk IF p.getProposer_seq() {} sn {} in instance {}", p.getProposer_seq(), sn,prepareOk.getInstance());
 
 		    	if(p.getProposer_seq()==sn) {
 					//logger.info("Adicionou ao prepareOkSet: na- "+na+" .");
@@ -281,9 +280,10 @@ public class Paxos extends GenericProtocol {
 			PaxosInstance p = paxosInstances.get(instN);
 			//logger.info("Timeout do timer: "+p.getTimer());
 			//logger.info("Paxos Timeout with instance number "+instN+" and op: "+ p.getHighest_Op().getOp_Id() );
-			//logger.info("Timeout with getDecided " + p.getDecided().getOp_Id());
+
 			if(p.getDecided()==null) {
-				p.setProposer_seq(p.getProposer_seq()+p.getMembership().size());
+				logger.info("Timeout in instance "+ instN);
+				p.setProposer_seq(p.getProposer_seq()+p.getMembership().size()+1);
 				PrepareMessage prepMsg;
 				for(Host member: p.getMembership()) {
 					prepMsg= new PrepareMessage(member,p.getProposer_seq(),instN);
@@ -292,6 +292,8 @@ public class Paxos extends GenericProtocol {
 				p.setPrepare_ok_set(new TreeMap<>());
 				long paxosTimerId = setupTimer(new PaxosTimer(instN), paxosTimeutTime);
 				p.setTimer(paxosTimerId);
+			}else{
+				logger.info("Timeout with getDecided " + p.getDecided().getOp_Id() + " in instance "+ instN);
 			}
 			paxosInstances.put(instN, p);
 	    }

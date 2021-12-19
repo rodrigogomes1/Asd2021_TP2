@@ -154,7 +154,7 @@ public class StateMachine extends GenericProtocol {
     /*--------------------------------- Requests ---------------------------------------- */
     private void uponOrderRequest(OrderRequest request, short sourceProto) {
         logger.debug("Received request: " + request);
-        logger.info("Order request {}", currentInstance);
+        //logger.info("Order request {}", currentInstance);
 
         bufferOrderRequests.add(request);
 
@@ -214,6 +214,7 @@ public class StateMachine extends GenericProtocol {
                 execNotif = bufferExecuteNotifications.get(0);
                 while (execNotif != null) {
                     triggerNotification(execNotif);
+                    logger.info("Execute Op with id: {} in instance {}",notification.getOpId(), notification.getInstance());
                     lastExecuted++;
                     bufferExecuteNotifications.remove(0);
 
