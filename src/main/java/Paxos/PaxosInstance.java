@@ -27,11 +27,11 @@ public class PaxosInstance {
     
     
     public PaxosInstance(Host localProcessId,List<Host> membership,int idx) {
-		this.idx=idx+1;
-    	proposer_seq=idx+1;
+		this.idx=idx;
+    	proposer_seq=idx;
     	this.membership=membership;
     	proposer_op=null;
-    	highest_prepare=0;
+    	highest_prepare=-1;
     	highest_accept=0;
     	highest_Op=null;
     	

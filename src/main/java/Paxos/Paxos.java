@@ -53,7 +53,7 @@ public class Paxos extends GenericProtocol {
 	         paxosInstances= new HashMap<>();
 
 	         
-	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "10000")); //5 seconds
+	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "500")); //5 seconds
 
 	         /*--------------------- Register Timer Handlers ----------------------------- */
 	         registerTimerHandler(PaxosTimer.TIMER_ID, this::uponPaxosTimer);
@@ -151,7 +151,7 @@ public class Paxos extends GenericProtocol {
 		    	}
 
 		    	int sn=prepare.getProposer_Seq();
-				logger.info("Entrou no Prepare if + sn:"+ sn + "  p.getHighest_prepare(): "+ p.getHighest_prepare() + " in instance " + prepare.getInstance());
+				//logger.info("Entrou no Prepare if + sn:"+ sn + "  p.getHighest_prepare(): "+ p.getHighest_prepare() + " in instance " + prepare.getInstance());
 		    	if(sn > p.getHighest_prepare()) {
 					//logger.info("Prepare msg Dentro if {} {} {}", prepare.getInstance(), from, myself);
 		    		p.setHighest_prepare(sn);
@@ -283,7 +283,7 @@ public class Paxos extends GenericProtocol {
 
 			if(p.getDecided()==null) {
 				logger.info("Timeout in instance "+ instN);
-				p.setProposer_seq(p.getProposer_seq()+p.getMembership().size()+1);
+				p.setProposer_seq(p.getProposer_seq()+p.getMembership().size());
 				PrepareMessage prepMsg;
 				for(Host member: p.getMembership()) {
 					prepMsg= new PrepareMessage(member,p.getProposer_seq(),instN);
@@ -293,7 +293,7 @@ public class Paxos extends GenericProtocol {
 				long paxosTimerId = setupTimer(new PaxosTimer(instN), paxosTimeutTime);
 				p.setTimer(paxosTimerId);
 			}else{
-				logger.info("Timeout with getDecided " + p.getDecided().getOp_Id() + " in instance "+ instN);
+				//logger.info("Timeout with getDecided " + p.getDecided().getOp_Id() + " in instance "+ instN);
 			}
 			paxosInstances.put(instN, p);
 	    }
