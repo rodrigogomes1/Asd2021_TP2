@@ -53,7 +53,7 @@ public class Paxos extends GenericProtocol {
 	         paxosInstances= new HashMap<>();
 
 	         
-	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "500")); //5 seconds
+	         this.paxosTimeutTime = Integer.parseInt(props.getProperty("paxos_Time", "15000")); //5 seconds
 
 	         /*--------------------- Register Timer Handlers ----------------------------- */
 	         registerTimerHandler(PaxosTimer.TIMER_ID, this::uponPaxosTimer);
@@ -151,7 +151,7 @@ public class Paxos extends GenericProtocol {
 		    	}
 
 		    	int sn=prepare.getProposer_Seq();
-				//logger.info("Entrou no Prepare if + sn:"+ sn + "  p.getHighest_prepare(): "+ p.getHighest_prepare() + " in instance " + prepare.getInstance());
+				logger.info("Entrou no Prepare if + sn:"+ sn + "  p.getHighest_prepare(): "+ p.getHighest_prepare() + " in instance " + prepare.getInstance());
 		    	if(sn > p.getHighest_prepare()) {
 					//logger.info("Prepare msg Dentro if {} {} {}", prepare.getInstance(), from, myself);
 		    		p.setHighest_prepare(sn);
@@ -172,7 +172,7 @@ public class Paxos extends GenericProtocol {
 		    	PaxosOperation va= prepareOk.getHighOp();
 		    	PaxosInstance p= paxosInstances.get(prepareOk.getInstance());
 
-				//logger.info("Dentro prepareOk IF p.getProposer_seq() {} sn {} in instance {}", p.getProposer_seq(), sn,prepareOk.getInstance());
+				logger.info("Dentro prepareOk IF p.getProposer_seq() {} sn {} in instance {}", p.getProposer_seq(), sn,prepareOk.getInstance());
 
 		    	if(p.getProposer_seq()==sn) {
 					//logger.info("Adicionou ao prepareOkSet: na- "+na+" .");
@@ -213,7 +213,7 @@ public class Paxos extends GenericProtocol {
 		    	}
 		    	
 		    	p.setMembership(accept.getMembership());
-				//logger.info("Dentro accept IF {} {}", p.getHighest_prepare(), sn);
+				logger.info("Dentro accept IF {} {}", p.getHighest_prepare(), sn);
 		    	if(sn >= p.getHighest_prepare()) {
 		    		p.setHighest_prepare(sn);
 		    		p.setHighest_accept(sn);
@@ -250,7 +250,7 @@ public class Paxos extends GenericProtocol {
 				//logger.info("AcceptOkMsg 3{}", p.getAccept_ok_set().firstEntry());
 
 				Entry<Integer, ArrayList<PaxosOperation>> entry = p.getAccept_ok_set().firstEntry();
-				//logger.info("Entrou no AcceptOk com size do acceptOkSet: "+p.getSize_Accept_ok_set()+" .");
+
 
 	    		if(entry==null || (entry.getKey()==sn && op.equals(entry.getValue().get(0))) ){
 	    			p.add_To_Accept_ok_set(sn, op);
@@ -258,7 +258,9 @@ public class Paxos extends GenericProtocol {
 	    			TreeMap<Integer, ArrayList<PaxosOperation>> newSet = new TreeMap<>();
 	    			p.setAccept_ok_set(newSet);
 	    			p.add_To_Accept_ok_set(sn, op);
-	       		}
+	       		}else{
+					logger.info("Entrou no AcceptOk e n fez nada .");
+				}
 
 		    	if( p.getDecided()==null && p.getSize_Accept_ok_set() >= (p.getMembership().size()/2)+1 ) {
 		    		p.setDecided(op);
