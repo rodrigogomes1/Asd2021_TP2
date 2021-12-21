@@ -1,4 +1,21 @@
-2021-12-21 11:24:55:003 0 sec: 0 operations; est completion in 0 second 
-2021-12-21 11:24:59:874 5 sec: 249 operations; 49,8 current ops/sec; est completion in 3 minutes [UPDATE AverageLatency(us)=45770,15] 
-2021-12-21 11:25:04:874 10 sec: 590 operations; 68,19 current ops/sec; est completion in 2 minutes [UPDATE AverageLatency(us)=38411,7] 
-2021-12-21 11:25:09:873 15 sec: 590 operations; 0 current ops/sec; est completion in 4 minutes  
+2021-12-21 16:43:42:265 0 sec: 0 operations; est completion in 0 second 
+2021-12-21 16:43:47:180 5 sec: 283 operations; 56,6 current ops/sec; est completion in 2 minutes [UPDATE AverageLatency(us)=57837,56] 
+2021-12-21 16:43:52:181 10 sec: 782 operations; 99,78 current ops/sec; est completion in 1 minute [UPDATE AverageLatency(us)=40280,92] 
+2021-12-21 16:43:57:180 15 sec: 1350 operations; 113,62 current ops/sec; est completion in 1 minute [UPDATE AverageLatency(us)=34181,8] 
+2021-12-21 16:44:02:180 20 sec: 1952 operations; 120,4 current ops/sec; est completion in 1 minute [UPDATE AverageLatency(us)=34085,57] 
+2021-12-21 16:44:07:181 25 sec: 2505 operations; 110,56 current ops/sec; est completion in 1 minute [UPDATE AverageLatency(us)=35905,79] 
+2021-12-21 16:44:12:181 30 sec: 2914 operations; 81,8 current ops/sec; est completion in 1 minute [UPDATE AverageLatency(us)=48397,86] 
+2021-12-21 16:44:17:180 35 sec: 3447 operations; 106,62 current ops/sec; est completion in 1 minute [UPDATE AverageLatency(us)=37717,6] 
+2021-12-21 16:44:22:180 40 sec: 4016 operations; 113,82 current ops/sec; est completion in 1 minute [UPDATE AverageLatency(us)=35338,88] 
+2021-12-21 16:44:27:180 45 sec: 4536 operations; 103,98 current ops/sec; est completion in 55 seconds [CLEANUP AverageLatency(us)=1] [UPDATE AverageLatency(us)=29168,91] 
+2021-12-21 16:44:32:179 50 sec: 5074 operations; 107,62 current ops/sec; est completion in 49 seconds  [UPDATE AverageLatency(us)=27964,42] 
+2021-12-21 16:44:37:180 55 sec: 5640 operations; 113,2 current ops/sec; est completion in 43 seconds  [UPDATE AverageLatency(us)=26504,8] 
+2021-12-21 16:44:42:180 60 sec: 6191 operations; 110,2 current ops/sec; est completion in 37 seconds  [UPDATE AverageLatency(us)=27074,11] 
+2021-12-21 16:44:47:181 65 sec: 6644 operations; 90,58 current ops/sec; est completion in 33 seconds  [UPDATE AverageLatency(us)=33001,76] 
+2021-12-21 16:44:52:180 70 sec: 7160 operations; 103,22 current ops/sec; est completion in 28 seconds  [UPDATE AverageLatency(us)=29306,8] 
+2021-12-21 16:44:57:180 75 sec: 7694 operations; 106,78 current ops/sec; est completion in 23 seconds  [UPDATE AverageLatency(us)=28091,04] 
+2021-12-21 16:45:02:179 80 sec: 8282 operations; 117,62 current ops/sec; est completion in 17 seconds  [UPDATE AverageLatency(us)=25257,8] 
+2021-12-21 16:45:07:182 85 sec: 8814 operations; 106,34 current ops/sec; est completion in 12 seconds [CLEANUP AverageLatency(us)=0] [UPDATE AverageLatency(us)=27363,47] 
+2021-12-21 16:45:12:180 90 sec: 8814 operations; 0 current ops/sec; est completion in 13 seconds   
+2021-12-21 16:45:17:181 95 sec: 8814 operations; 0 current ops/sec; est completion in 13 seconds   
+2021-12-21 16:45:22:181 100 sec: 8814 operations; 0 current ops/sec; est completion in 14 seconds   

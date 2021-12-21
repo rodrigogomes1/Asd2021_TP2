@@ -133,8 +133,9 @@ public class StateMachine extends GenericProtocol {
             }
             initialMembership.add(h);
         }
-
+	logger.info("self "+self);
         if (initialMembership.contains(self)) {
+        	
             state = State.ACTIVE;
             logger.info("Starting in ACTIVE as I am part of initial membership");
             //I'm part of the initial membership, so I'm assuming the system is bootstrapping
