@@ -124,10 +124,7 @@ public class PaxosInstance {
 		prepare_ok_set.put(seqN, paxList);
 	}
 	
-	public int getSize_Prepare_ok_set(int sn) {
-		if(prepare_ok_set.get(sn)==null) {
-			return 0;
-		}
+	public int getSize_Prepare_ok_set() {
 		int size=0;
 		for(Entry<Integer, ArrayList<PaxosOperation>> entry : prepare_ok_set.entrySet() ){
 			size=size + entry.getValue().size();

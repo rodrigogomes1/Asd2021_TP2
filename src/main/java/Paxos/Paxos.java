@@ -180,8 +180,8 @@ public class Paxos extends GenericProtocol {
 			if(p.getProposer_seq()==sn) {
 
 				p.add_To_Prepare_ok_set(na, va);
-				//logger.info("Adicionou ao prepareOkSet: na- "+na+" ."+ " com tamanho "+ p.getSize_Prepare_ok_set(na));
-				if(p.getSize_Prepare_ok_set(na) >= (p.getMembership().size()/2)+1) {
+				//logger.info("Adicionou ao prepareOkSet: na- "+na+" ."+ " com tamanho "+ p.getSize_Prepare_ok_set());
+				if(p.getSize_Prepare_ok_set() >= (p.getMembership().size()/2)+1) {
 
 					Entry<Integer, ArrayList<PaxosOperation>> highestEntry= p.getHighest_Of_Prepare_ok_set();
 					if(highestEntry!=null && highestEntry.getValue()!=null && highestEntry.getValue().get(0)!=null) {

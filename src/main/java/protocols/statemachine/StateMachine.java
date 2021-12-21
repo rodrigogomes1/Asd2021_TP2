@@ -142,6 +142,7 @@ public class StateMachine extends GenericProtocol {
             membership = new LinkedList<>(initialMembership);
             membership.forEach(this::openConnection);
             triggerNotification(new JoinedNotification(membership, 0));
+
         } else {
             state = State.JOINING;
             logger.info("Starting in JOINING as I am not part of initial membership");
@@ -165,8 +166,11 @@ public class StateMachine extends GenericProtocol {
             //Also do something starter, we don't want an infinite number of instances active
             //Maybe you should modify what is it that you are proposing so that you remember that this
             //operation was issued by the application (and not an internal operation, check the uponDecidedNotification)
+
             sendRequest(new ProposeRequest(currentInstance+1, request.getOpId(), request.getOperation()),
                     Paxos.PROTOCOL_ID);
+
+
         }
     }
 
@@ -197,12 +201,16 @@ public class StateMachine extends GenericProtocol {
 
         if(nextRequest != null){
             if(nextRequest.getOpId().compareTo(notification.getOpId()) == 0){
+
                 bufferOrderRequests.remove(0);
                 //logger.info("Decide Notification {} Mine", notification.getInstance());
             }else{
                 //logger.info("Decide Notification {} Other", notification.getInstance());
+
                 sendRequest(new ProposeRequest(currentInstance+1, nextRequest.getOpId(), nextRequest.getOperation()),
                         Paxos.PROTOCOL_ID);
+
+
             }
         }
 
