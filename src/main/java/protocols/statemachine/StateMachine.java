@@ -180,10 +180,11 @@ public class StateMachine extends GenericProtocol {
 
     /*--------------------------------- Notifications ---------------------------------------- */
     private void uponDecidedNotification(DecidedNotification notification, short sourceProto) {
-        logger.debug("Received notification: " + notification);
+        //logger.debug("Received notification: " + notification);
         //Maybe we should make sure operations are executed in order?
         //You should be careful and check if this operation if an application operation (and send it up)
         //or if this is an operations that was executed by the state machine itself (in which case you should execute)
+        //logger.info("Received notificationOp with id: {} in instance {}",notification.getOpId(), notification.getInstance());
 
         if(notification.getInstance() > currentInstance)
             currentInstance = notification.getInstance();
@@ -209,12 +210,11 @@ public class StateMachine extends GenericProtocol {
         if(lastExecuted+1 == notification.getInstance()){
             lastExecuted++;
             triggerNotification(execNotif);
-            logger.info("Execute Op with id: {} in instance {}",notification.getOpId(), notification.getInstance());
+            //logger.info("Execute Op with id: {} in instance {}",notification.getOpId(), notification.getInstance());
             if(bufferExecuteNotifications.size() != 0) {
                 execNotif = bufferExecuteNotifications.get(0);
                 while (execNotif != null) {
                     triggerNotification(execNotif);
-                    logger.info("Execute Op with id: {} in instance {}",notification.getOpId(), notification.getInstance());
                     lastExecuted++;
                     bufferExecuteNotifications.remove(0);
 

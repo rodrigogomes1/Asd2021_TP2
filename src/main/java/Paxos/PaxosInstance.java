@@ -32,7 +32,7 @@ public class PaxosInstance {
     	this.membership=membership;
     	proposer_op=null;
     	highest_prepare=-1;
-    	highest_accept=0;
+    	highest_accept=-1;
     	highest_Op=null;
     	
     	prepare_ok_set=new TreeMap<Integer, ArrayList<PaxosOperation>>();
@@ -128,7 +128,11 @@ public class PaxosInstance {
 		if(prepare_ok_set.get(sn)==null) {
 			return 0;
 		}
-		return prepare_ok_set.get(sn).size();
+		int size=0;
+		for(Entry<Integer, ArrayList<PaxosOperation>> entry : prepare_ok_set.entrySet() ){
+			size=size + entry.getValue().size();
+		}
+		return size;
 	}
 	
 	public Entry<Integer, ArrayList<PaxosOperation>> getHighest_Of_Prepare_ok_set() {
